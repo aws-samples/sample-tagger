@@ -35,7 +35,6 @@ Metadata:
       IPv6CIDR: 
         default: "AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)."
 
-
 Parameters:
   GitHubRepositoryUrl:
     Type: String    
