@@ -35,7 +35,7 @@ Metadata:
 Parameters:
   GitHubRepositoryUrl:
     Type: String    
-    Default : https://github.com/aws-samples/tagger.git
+    Default : https://github.com/aws-samples/sample-tagger.git
    
   AppUser:
     Type: String    
