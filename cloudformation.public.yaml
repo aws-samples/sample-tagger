@@ -1,0 +1,612 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to build frontend for Tagger Solution'
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:     
+      - 
+        Label: 
+          default: "General Configuration"
+        Parameters:
+          - GitHubRepositoryUrl
+          - AppUser
+      - 
+        Label: 
+          default: "Network and Security Configuration"
+        Parameters:
+          - WAFRequired
+          - IPv4CIDR
+          - IPv6CIDR
+      
+    ParameterLabels:
+      GitHubRepositoryUrl: 
+        default: "GitHub repository URL (https format)."
+      AppUser: 
+        default: "Application User (mail@example.com)."
+      WAFRequired: 
+        default: "Enable AWS WAF Service (Optional)."
+      IPv4CIDR: 
+        default: "CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24) - (Optional only for AWS WAF Service)."
+      IPv6CIDR: 
+        default: "CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128) - (Optional only for AWS WAF Service)."
+
+
+
+Parameters:
+  GitHubRepositoryUrl:
+    Type: String    
+    Default : https://github.com/aws-samples/tagger.git
+   
+  AppUser:
+    Type: String    
+    Default : mail@example.com
+
+  IPv4CIDR:
+    Type: String    
+    Default : "192.168.1.0/24"
+
+  IPv6CIDR:
+    Type: String    
+    Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
+
+  WAFRequired:
+      Type: String      
+      Default: "true"
+      AllowedValues:
+      - "true"
+      - "false"
+  
+Conditions:
+  isWAFRequired: !Equals [ !Ref WAFRequired, true]
+  isNotWAFRequired: !Equals [ !Ref WAFRequired, false]
+
+
+Resources: 
+
+#######################|-
+#######################|-  CodeBuild Resources
+#######################|-
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "CodeBuildPolicy"
+          PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cloudformation:CreateStack",
+                              "cloudformation:DescribeStacks",
+                              "cloudformation:UpdateStack",
+                              "cloudformation:DeleteStack",
+                              "cloudformation:GetTemplate"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "s3:CreateBucket",
+                              "s3:PutBucketPolicy",
+                              "s3:PutBucketVersioning",
+                              "s3:PutBucketPublicAccessBlock",
+                              "s3:PutBucketOwnershipControls",
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:ListBucket",
+                              "s3:PutEncryptionConfiguration",
+                              "s3:PutLifecycleConfiguration",
+                              "s3:DeleteObject",
+                              "s3:DeleteBucket"
+                          ],
+                          "Resource": "*"
+                      },                      
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "wafv2:CreateWebACL",
+                          "wafv2:CreateIPSet",
+                          "wafv2:GetWebACL",
+                          "wafv2:GetIPSet",
+                          "wafv2:UpdateWebACL",
+                          "wafv2:UpdateIPSet",
+                          "wafv2:ListWebACLs",
+                          "wafv2:ListIPSets",
+                          "wafv2:TagResource",
+                          "wafv2:ListTagsForResource",
+                          "wafv2:AssociateWebACL",
+                          "wafv2:GetWebACLForResource",
+                          "wafv2:AssociateWebACL",
+                          "wafv2:DisassociateWebACL"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:CreateRole",
+                              "iam:PutRolePolicy",
+                              "iam:CreatePolicy",
+                              "iam:AttachRolePolicy",
+                              "iam:PassRole",
+                              "iam:GetRole",
+                              "iam:GetPolicy",
+                              "iam:getRolePolicy",
+                              "iam:CreateServiceLinkedRole"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cognito-idp:CreateUserPool",
+                              "cognito-idp:CreateUserPoolClient",
+                              "cognito-idp:AdminCreateUser",
+                              "cognito-idp:TagResource",
+                              "cognito-idp:DescribeUserPool",
+                              "cognito-idp:AdminGetUser",
+                              "cognito-idp:DescribeUserPoolClient"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "apigateway:POST",
+                              "apigateway:GET",
+                              "apigateway:PUT",
+                              "apigateway:PATCH"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "lambda:CreateFunction",
+                              "lambda:GetFunction",
+                              "lambda:AddPermission",
+                              "lambda:PublishLayerVersion",
+                              "lambda:GetLayerVersion",
+                              "lambda:InvokeAsync",
+                              "lambda:InvokeFunction"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "dsql:DbConnectAdmin",
+                              "dsql:CreateCluster",
+                              "dsql:TagResource",
+                              "dsql:GetCluster"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Action": [
+                              "iam:CreatePolicy",
+                              "iam:CreateRole"
+                          ],
+                          "Resource": "*",
+                          "Effect": "Allow"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "logs:CreateLogGroup",
+                              "logs:CreateLogStream",
+                              "logs:PutLogEvents",
+                              "logs:DescribeLogGroups"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "sns:Publish"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:CreateRepository",
+                              "ecr:GetAuthorizationToken"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:BatchCheckLayerAvailability",
+                              "ecr:GetDownloadUrlForLayer",
+                              "ecr:BatchGetImage",
+                              "ecr:InitiateLayerUpload",
+                              "ecr:UploadLayerPart",
+                              "ecr:CompleteLayerUpload",
+                              "ecr:PutImage"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "apprunner:CreateService",
+                              "apprunner:DescribeService",
+                              "apprunner:AssociateWebAcl"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:PassRole"
+                          ],
+                          "Resource": "*",
+                          "Condition": {
+                              "StringLike": {
+                                  "iam:PassedToService": "apprunner.amazonaws.com"
+                              }
+                          }
+                      }                      
+                  ]
+                }
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AppUser
+            Value: !Ref AppUser
+          - Name: IPv4CIDR
+            Value: !Ref IPv4CIDR
+          - Name: IPv6CIDR
+            Value: !Ref IPv6CIDR
+          - Name: AwsRegion
+            Value: !Ref AWS::Region
+          - Name: AppId
+            Value: "tagger"
+          - Name: Identifier
+            Value: !Join [ "-", [!Ref AWS::AccountId, !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          - Name: StackName
+            Value: !Ref AWS::StackName
+          
+          
+
+      Source:
+        Type: GITHUB
+        Location: !Ref GitHubRepositoryUrl
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                nodejs: 20
+              commands:
+                - sudo yum install -y docker
+                - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                - unzip -q awscliv2.zip 
+                - sudo ./aws/install --update
+                - sudo dnf install python3.11 -y
+                - sudo dnf install python3.11-pip -y
+                
+                    
+            pre_build:
+              commands:
+                - aws --version
+                
+
+            build:
+              commands:
+                - echo Build phase started                    
+                - |
+                  cat > variables.env << EOF
+                  #!/bin/sh
+                  export APP_ID="${AppId}"
+                  export APP_USER="${AppUser}"
+                  export IDENTIFIER="${Identifier}"
+                  export AWS_REGION="${AwsRegion}"  
+                  export IPV4_CIDR="${IPv4CIDR}"
+                  export IPV6_CIDR="${IPv6CIDR}"
+                  export BUILD_PATH="/tmp/deployment/build"
+                  export ECR_REPO_NAME="ecr-private-apprunner-deployment"
+                  export STACK_ID="${AppId}-${Identifier}"  
+                  export STACK_NAME="${StackName}"                                  
+                  EOF
+                - cat variables.env                         
+                - sh setup.backend.sh
+                - sh setup.frontend.sh
+                
+            post_build:
+              commands:
+                - echo Post-build phase started
+                
+     
+#######################|-
+#######################|-  Lambda Resources
+#######################|-
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codebuild:StartBuild'
+                  - 'codebuild:BatchGetBuilds'
+                Resource: !GetAtt CodeBuildProject.Arn
+
+  StartCodeBuildFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 900  # 15 minutes, adjust based on your build time
+      MemorySize: 4096
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import time
+          import json
+          
+          def handler(event, context):
+              # Extract parameters
+              props = event['ResourceProperties']
+              project_name = props['ProjectName']
+              
+              # Initialize CodeBuild client
+              codebuild = boto3.client('codebuild')
+              response_data = {}
+              
+              try:
+                  if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                      # Start build
+                      print(f"Starting CodeBuild project: {project_name}")
+                      build = codebuild.start_build(projectName=project_name)
+                      build_id = build['build']['id']
+                      
+                      print(f"Build started with ID: {build_id}")
+                      response_data['BuildId'] = build_id
+                      
+                      # Poll until build completes or timeout
+                      status = 'IN_PROGRESS'
+                      while status == 'IN_PROGRESS':
+                          time.sleep(30)  # Wait 30 seconds between checks
+                          build_status = codebuild.batch_get_builds(ids=[build_id])
+                          status = build_status['builds'][0]['buildStatus']
+                          print(f"Current build status: {status}")
+                          
+                          # Check for timeout (context.get_remaining_time_in_millis() <= 30000)
+                          if context.get_remaining_time_in_millis() <= 60000:  # 60 seconds remaining
+                              print("Lambda is about to timeout. Reporting success anyway.")
+                              break
+                      
+                      if status == 'SUCCEEDED':
+                          print("Build completed successfully")
+                          response_data['Status'] = 'SUCCESS'
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                      else:
+                          print(f"Build failed or didn't complete: {status}")
+                          response_data['Status'] = status
+                          cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+                  
+                  elif event['RequestType'] == 'Delete':
+                      # Nothing to do on delete
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+              
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  response_data['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+
+  BuildFrontendCustomResource:
+    Type: Custom::BuildFrontend
+    DependsOn: 
+      - CodeBuildProject
+    Properties:
+      ServiceToken: !GetAtt StartCodeBuildFunction.Arn
+      ProjectName: !Ref CodeBuildProject
+
+
+
+#######################|-
+#######################|-  App Runner Resources WITH WAF
+#######################|-
+
+
+  AppRunnerWAFWebACL:
+    Type: 'AWS::WAFv2::WebACL'
+    DependsOn: BuildFrontendCustomResource
+    Condition: isWAFRequired
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      Scope: 'REGIONAL'
+      Description: 'WAF WebACL for App Runner service with IP-based allow rules'
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      Rules:
+        - Name: 'AllowIPv4Rule'
+          Priority: 0
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt IPv4IPSet.Arn
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: 'AllowIPv4Rule'
+        - Name: 'AllowIPv6Rule'
+          Priority: 1
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt IPv6IPSet.Arn
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: 'AllowIPv6Rule'
+
+  IPv4IPSet:
+    Type: 'AWS::WAFv2::IPSet'
+    Condition: isWAFRequired
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"ipv4"]]
+      Description: 'IPv4 addresses allowed to access App Runner service'
+      Scope: 'REGIONAL'
+      IPAddressVersion: 'IPV4'
+      Addresses:
+        - !Ref IPv4CIDR
+
+  IPv6IPSet:
+    Type: 'AWS::WAFv2::IPSet'
+    Condition: isWAFRequired
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"ipv6"]]
+      Description: 'IPv6 addresses allowed to access App Runner service'
+      Scope: 'REGIONAL'
+      IPAddressVersion: 'IPV6'
+      Addresses:
+        - !Ref IPv6CIDR
+
+  AppRunnerAccessRole:
+    Type: 'AWS::IAM::Role'    
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 
+                - 'build.apprunner.amazonaws.com'
+                - 'wafv2.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "AppRunnerdPolicy"
+          PolicyDocument: !Sub |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ecr:GetDownloadUrlForLayer",
+                          "ecr:BatchGetImage",
+                          "ecr:DescribeImages",
+                          "ecr:GetAuthorizationToken",
+                          "ecr:BatchCheckLayerAvailability"
+                        ],
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+
+
+  AppRunnerService:
+    Type: 'AWS::AppRunner::Service'
+    DependsOn: AppRunnerWAFWebACL
+    Condition: isWAFRequired
+    Properties:
+      ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:tagger'         
+          ImageConfiguration:
+            Port: '80'
+          ImageRepositoryType: 'ECR'
+        AutoDeploymentsEnabled: false
+      InstanceConfiguration:
+        Cpu: '1 vCPU'
+        Memory: '2 GB'
+      NetworkConfiguration:
+        IngressConfiguration:
+          IsPubliclyAccessible: true
+
+  WebACLAssociation:
+    Type: 'AWS::WAFv2::WebACLAssociation'
+    DependsOn: AppRunnerService
+    Condition: isWAFRequired
+    Properties:
+      ResourceArn: !GetAtt AppRunnerService.ServiceArn
+      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
+
+
+#######################|-
+#######################|-  App Runner Resources WITHOUT WAF
+#######################|-
+
+
+  AppRunnerServiceNotWAF:
+    Type: 'AWS::AppRunner::Service'  
+    Condition: isNotWAFRequired
+    Properties:
+      ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:tagger'         
+          ImageConfiguration:
+            Port: '80'
+          ImageRepositoryType: 'ECR'
+        AutoDeploymentsEnabled: false
+      InstanceConfiguration:
+        Cpu: '1 vCPU'
+        Memory: '2 GB'
+      NetworkConfiguration:
+        IngressConfiguration:
+          IsPubliclyAccessible: true
+
+
+Outputs:
+  AppRunnerServiceURLWAF:
+    Description: 'URL of the App Runner service'
+    Value: !GetAtt AppRunnerService.ServiceUrl
+    Condition: isWAFRequired
+
+  AppRunnerServiceURL:
+    Description: 'URL of the App Runner service'
+    Value: !GetAtt AppRunnerServiceNotWAF.ServiceUrl
+    Condition: isNotWAFRequired

@@ -1,0 +1,12 @@
+{
+  "aws_region": "us-east-1",
+  "aws_cognito_user_pool_id": "",
+  "aws_cognito_user_pool_web_client_id": "",
+  "aws_api_port": 3000,
+  "aws_token_expiration": 24,
+  "ecs_region": "us-east-1", 
+  "ecs_cluster": "ecs-cluster-01", 
+  "ecs_task": "arn:aws:ecs:us-east-1:XXXXXXXXXXXXXX:task-definition/DB-PGS-W01:3", 
+  "ecs_container": "db-pgs-w01"  
+}
+
