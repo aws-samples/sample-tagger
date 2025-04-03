@@ -580,6 +580,7 @@ Resources:
 
   AppRunnerServiceNotWAF:
     Type: 'AWS::AppRunner::Service'  
+    DependsOn: BuildFrontendCustomResource
     Condition: isNotWAFRequired
     Properties:
       ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
