@@ -1,0 +1,21 @@
+.custom-orange-button {
+  background-color: #ff9900 !important;
+  border-color: #ff9900 !important;
+  color: #000000 !important;
+}
+
+.custom-orange-button:hover {
+  background-color: #ffa722 !important;
+  border-color: #ffa722 !important;
+  color: #000000 !important;
+}
+
+.custom-orange-button:active {
+  background-color: #e88b00 !important;
+  border-color: #e88b00 !important;
+  color: #000000 !important;
+}
+
+.custom-orange-button:focus {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #ff9900 !important;
+}

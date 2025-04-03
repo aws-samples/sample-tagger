@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "MAP Tagger Solution - Cross Account Role"
+Parameters:
+  RoleARN:
+      Type: String
+      Description: IAM ARN Role for Central Account
+Resources:
+    IAMPolicyMapTaggerSolution:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            ManagedPolicyName: !Join [ "-", ["policy-map-tagger-solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+            PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "apigateway:GET",
+                        "apigateway:PATCH",
+                        "apigateway:PUT",
+                        "apigateway:DELETE",
+                        "apigateway:POST",
+                        "backup:ListBackupVaults",
+                        "backup:ListBackupPlans",
+                        "backup:ListTags",
+                        "backup:TagResource",
+                        "dynamodb:ListTables",
+                        "dynamodb:Describe*",
+                        "dynamodb:TagResource",
+                        "dynamodb:ListTagsOfResource",
+                        "ec2:Describe*",
+                        "ec2:CreateTags",
+                        "ec2:DeleteTags",
+                        "ec2:DescribeVolumes",
+                        "ec2:DescribeSnapshots",
+                        "ec2:DescribeTransitGateways",
+                        "ec2:DescribeTransitGatewayAttachments",
+                        "ec2:DescribeTags",
+                        "ec2:CreateTags",
+                        "ecr:DescribeRepositories",
+                        "ecr:ListTagsForResource",
+                        "ecr:TagResource",
+                        "ecs:ListClusters",
+                        "ecs:DescribeClusters",
+                        "ecs:ListTagsForResource",
+                        "ecs:TagResource",
+                        "eks:ListClusters",
+                        "eks:ListTagsForResource",
+                        "eks:TagResource",
+                        "elasticfilesystem:Describe*",
+                        "elasticfilesystem:CreateTags",
+                        "elasticfilesystem:ListTagsForResource",
+                        "elasticloadbalancing:AddTags",
+                        "elasticloadbalancing:Describe*",
+                        "elasticmapreduce:DescribeCluster",
+                        "elasticmapreduce:ListClusters",
+                        "elasticmapreduce:AddTags",
+                        "fsx:TagResource",
+                        "fsx:DescribeFileSystems",
+                        "fsx:ListTagsForResource",
+                        "fsx:DescribeBackups",
+                        "lambda:List*",
+                        "lambda:Get*",
+                        "lambda:TagResource",
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "logs:DescribeLogGroups",
+                        "logs:DescribeLogStreams",
+                        "redshift:CreateTags",
+                        "redshift:Describe*",
+                        "rds:ListTagsForResource",
+                        "rds:Describe*",
+                        "rds:DescribeDBInstances",
+                        "rds:AddTagsToResource",
+                        "s3:Get*",
+                        "s3:List*",
+                        "s3:PutBucketTagging",
+                        "tag:Get*",
+                        "tag:TagResources",
+                        "transfer:ListServers",
+                        "transfer:ListTagsForResource",
+                        "transfer:TagResource",
+                        "workspaces:DescribeWorkspaces",
+                        "workspaces:CreateTags",
+                        "rds:RemoveTagsFromResource",
+                        "elasticloadbalancing:RemoveTags",
+                        "elasticfilesystem:DeleteTags",
+                        "fsx:UntagResource",
+                        "dynamodb:UntagResource",
+                        "lambda:UntagResource",
+                        "backup:UntagResource",
+                        "ecr:UntagResource",
+                        "eks:UntagResource",
+                        "eks:DescribeCluster",
+                        "ecs:UntagResource",
+                        "elasticmapreduce:RemoveTags",
+                        "transfer:DescribeServer",
+                        "transfer:UntagResource"
+                      ],
+                      "Resource": "*"
+                    }
+                  ]
+                }
+                
+    IAMRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            RoleName: "MAPTaggingProcessRole"
+            AssumeRolePolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": "${RoleARN}"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                }
+            MaxSessionDuration: 3600
+            ManagedPolicyArns:
+                - !Ref IAMPolicyMapTaggerSolution
+    
+    

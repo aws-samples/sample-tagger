@@ -1,0 +1,7 @@
+{
+    "EC2" : ["EC2::Instance","EC2::Volume","EC2::Snapshot","EC2::EIP","EC2::Image","EC2::InternetGateway","EC2::NatGateway","EC2::VPNConnection","EC2::SecurityGroup","EC2::NetworkACL","EC2::VPC","EC2::Subnet","EC2::RouteTable","EC2::VPNGateway","EC2::CustomerGateway"],
+    "RDS" : ["RDS::DBCluster","RDS::DBClusterSnapshot","RDS::DBInstance","RDS::DBSnapshot","RDS::SubnetGroup","RDS::OptionGroup","RDS::DBClusterParameterGroup","RDS::DBParameterGroup","RDS::DBSecurityGroup"]
+}
+
+
+
