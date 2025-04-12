@@ -6,7 +6,7 @@ export const configuration =
         "refresh-interval": 5*1000,      
         "api-url" : api["url"],          
         "release" : "0.1.0",
-        "application-title": "Tagger Solution",
+        "application-title": "Taggr Solution",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",
     },
     "colors": {
@@ -41,6 +41,7 @@ export const SideMainLayoutMenu = [
         defaultExpanded: true,
         items: [
             { type: "link", text: "Dashboard", href: "/dashboard/" },
+            { type: "link", text: "Compliance", href: "/compliance/" },
             { type: "link", text: "Tag Editor", href: "/tagger/" }
         ],
       },
@@ -58,7 +59,7 @@ export const SideMainLayoutMenu = [
     {
           type: "link",
           text: "Documentation",
-          href: "https://github.com/aws-samples/map-tagger-solution/",
+          href: "https://github.com/aws-samples/sample-tagger/",
           external: true,
           externalIconAriaLabel: "Opens in a new tab"
     }

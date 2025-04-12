@@ -73,7 +73,7 @@ export default function Auth({children}) {
   return (
     <Grid templateColumns={{ base: "1fr 0", medium: "1fr 0fr" }}>
       <Flex
-        backgroundColor={"rgb(247,247,247)"}
+        
         justifyContent="center"
       >
         <Authenticator hideSignUp={true} components={components}>
@@ -85,7 +85,7 @@ export default function Auth({children}) {
         </Authenticator>
       </Flex>
       <View height="100vh"
-          backgroundColor={"rgb(247,247,247)"}
+        
       >
       </View>
     </Grid>

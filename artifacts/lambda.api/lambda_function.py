@@ -995,7 +995,7 @@ def fn_13_get_dataset_metadata_bases(event: dict) -> APIGatewayResponse:
         FROM
             tbprocess
         WHERE            
-            type = 2
+            type = %s
         ORDER BY
             scan_id DESC
         LIMIT
@@ -1003,7 +1003,7 @@ def fn_13_get_dataset_metadata_bases(event: dict) -> APIGatewayResponse:
         
         """    
         
-        parameters = (100,)
+        parameters = (event['type'],100,)
         rows = ds.execute_select(select_query, parameters)
         
         processes  = []
@@ -1430,6 +1430,259 @@ def fn_21_validate_module_content(event: dict) -> APIGatewayResponse:
         )
 
 
+
+
+
+###
+###-- Get compliance scores
+###
+
+def fn_22_get_compliance_score(event: dict) -> APIGatewayResponse:
+    try:
+        
+        ds = DataStore(db_config=DB_CONFIG, region=REGION)
+        
+
+        ## Summary
+
+        select_query = """
+        SELECT
+            SUM(case when action = 2 then 1 else 0 end) in_compliance,
+            SUM(case when action = 1 then 1 else 0 end) out_compliance,
+            COUNT(*) total
+        FROM
+            tbresources
+        WHERE
+            scan_id = %s
+        """
+        
+        parameters = (event['scanId'],)
+        rows = ds.execute_select(select_query, parameters)
+        
+        summary  = {}
+        for row in rows:
+            summary = {
+                         "in_compliance" : row[0], 
+                         "out_compliance" : row[1], 
+                         "total" : row[2]
+            }
+
+
+        ### In-Compliance 
+
+        select_query = """
+        SELECT
+            service,
+            COUNT(*) total
+        FROM
+            tbresources
+        WHERE
+            scan_id = %s
+            AND 
+            action = 2
+        GROUP BY service
+        """
+
+        parameters = (event['scanId'],)
+        rows = ds.execute_select(select_query, parameters)
+
+        resources_in_compliance  = []
+        for row in rows:
+            resources_in_compliance.append({
+                          "title" : row[0],
+                          "value" : row[1]
+                         }
+            )
+          
+        
+        ### Out-Compliance 
+
+        select_query = """
+        SELECT
+            service,
+            COUNT(*) total
+        FROM
+            tbresources
+        WHERE
+            scan_id = %s
+            AND 
+            action = 1
+        GROUP BY service
+        """
+
+        parameters = (event['scanId'],)
+        rows = ds.execute_select(select_query, parameters)
+
+        resources_out_compliance  = []
+        for row in rows:
+            resources_out_compliance.append({
+                          "title" : row[0],
+                          "value" : row[1]
+                         }
+            )
+        
+
+        return create_response(200, { 
+                                        "response" : { 
+                                                        "summary" : summary, 
+                                                        "in_compliance" : resources_in_compliance, 
+                                                        "out_compliance"  : resources_out_compliance 
+                                                    }
+                                    }
+        )
+       
+
+    except Exception as e:
+        logger.error(f"Error in fn_22_get_compliance_score: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+###
+###-- Get tagging information
+###
+
+
+def fn_23_get_tagging_errors(event: dict) -> APIGatewayResponse:
+    try:
+        
+        ds = DataStore(db_config=DB_CONFIG, region=REGION)
+        
+        select_query = """
+        SELECT
+            account_id,
+            region,
+            service,
+            resource_id,
+            arn,
+            status,
+            error
+        FROM
+            tbtag_errors
+        WHERE            
+            scan_id = %s
+
+        """
+        
+        parameters = (event['scanId'],)
+        rows = ds.execute_select(select_query, parameters)
+        
+        resources  = []
+        for row in rows:
+            resources.append({
+                         "account_id" : row[0], 
+                         "region" : row[1], 
+                         "service" : row[2], 
+                         "resource_id" : row[3], 
+                         "arn" : row[4], 
+                         "status" : row[5], 
+                         "error" : row[6]                  
+            })
+        
+          
+        
+
+        return create_response(200, { 
+                                        "response" : { "resources" : resources  }
+                                    }
+        )
+       
+
+    except Exception as e:
+        logger.error(f"Error in fn_23_get_tagging_errors: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+###
+###-- Validate module content
+###
+
+def fn_24_get_profile_catalog(event: dict) -> APIGatewayResponse:
+    try:
+        
+
+        region = os.environ['REGION']
+        bucket_name = os.environ['S3_BUCKET_MODULES']
+        
+        s3 = boto3.client('s3',region_name=region)
+
+        # Get regions        
+        response = s3.get_object(Bucket=bucket_name, Key="regions.json")        
+        regions = json.loads(response['Body'].read().decode('utf-8'))                    
+
+
+        # Get list of modules
+        response = s3.list_objects_v2(Bucket=bucket_name)    
+        modules = [
+            {
+                'name': item['Key'],
+                'size': item['Size'],
+                'lastModified': item['LastModified'].isoformat()
+            }
+            for item in response.get('Contents', [])  
+            if item['Key'].endswith('.py')           
+        ]
+        
+
+        # Get resources modules
+        all_services = []        
+        for module_item in modules:
+
+            response = s3.get_object(Bucket=bucket_name, Key=module_item['name'])        
+            code = response['Body'].read().decode('utf-8')                    
+
+            # Create a module name (can be any valid string)
+            module_name = "dynamic_module"
+            
+            # Create a module spec
+            spec = importlib.util.spec_from_loader(module_name, loader=None)
+
+            # Create a module based on the spec
+            module = importlib.util.module_from_spec(spec)
+
+            # Add the module to sys.modules
+            sys.modules[module_name] = module
+
+                
+            # Execute the code string in the module's namespace
+            exec(code, module.__dict__)
+
+            # Now you can use the imported code                
+            service_list = (module.get_service_types(None,None,None,None)).keys()               
+            
+            for service in service_list:                                               
+                all_services.append( f'{module_item["name"][:-3]}::{service}')     
+               
+            
+            
+        all_services.sort()    
+
+        return create_response(200, { 
+                                        "response" :  { "services" : all_services , "regions" :  regions }
+                                    }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in fn_24_get_profile_catalog: {str(e)}")
+        return create_error_response(
+            500,
+            f'Internal server error : {e}',
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+
+
 ######################################################
 ######################################################
 ###
@@ -1510,6 +1763,19 @@ def lambda_handler(event, context):
 
         elif parameters['processId'] == '21-validate-module-content':
             response = fn_21_validate_module_content(parameters)         
+
+        elif parameters['processId'] == '22-compliance-score':
+            response = fn_22_get_compliance_score(parameters)         
+
+        elif parameters['processId'] == '23-get-tagging-errors':
+            response = fn_23_get_tagging_errors(parameters)         
+
+        elif parameters['processId'] == '24-get-profile-catalog':
+            response = fn_24_get_profile_catalog(parameters)         
+
+
+
+
         else:
             response = create_error_response(
                 404,
