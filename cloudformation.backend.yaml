@@ -386,7 +386,7 @@ Resources:
                                 "sts:AssumeRole"
                             ],
                             "Resource": [
-                                "arn:aws:iam::${AWS::AccountId}:role/*"
+                                "*"
                             ]
                         },                     
                         {
