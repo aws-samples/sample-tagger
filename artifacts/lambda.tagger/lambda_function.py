@@ -119,6 +119,79 @@ class DataStore:
 
 
 
+    ###
+    ###-- Save tag errors to data store
+    ###
+
+    def save_tags_errors(self, scan_id, tags, batch_size=1000):
+      
+        # Prepare INSERT statement
+        insert_query = """
+        INSERT INTO tbtag_errors (
+            scan_id,            
+            account_id, 
+            region, 
+            service,
+            resource_id, 
+            arn,
+            status,
+            error
+        ) VALUES %s      
+        """
+        
+        
+        # Get a connection from the pool
+        connection = None
+        cursor = None
+        
+        try:
+            connection = self.connection_pool.getconn()
+            cursor = connection.cursor()
+            
+            # Process tags in batches
+            for i in range(0, len(tags), batch_size):
+                batch = tags[i:i+batch_size]
+                
+                # Prepare batch data
+                batch_data = [
+                    (
+                        scan_id,                        
+                        tag['account_id'], 
+                        tag['region'], 
+                        tag['service'], 
+                        tag['identifier'], 
+                        tag['arn'], 
+                        tag['status'], 
+                        tag['error']
+                    ) for tag in batch
+                ]
+                
+
+                # Use execute_values for efficient batch insert
+                from psycopg2.extras import execute_values
+                execute_values(
+                    cursor, 
+                    insert_query, 
+                    batch_data
+                )
+                
+                # Commit each batch
+                connection.commit()
+                
+                self.logger.info(f"Inserted {len(batch)} records")
+        
+        except Exception as e:
+            self.logger.error(f"Error saving error tags to database: {e}")
+            if connection:
+                connection.rollback()
+            raise
+        
+        finally:
+            # Close cursor and return connection to pool
+            if cursor:
+                cursor.close()
+            if connection:
+                self.connection_pool.putconn(connection)
 
 ######################################################
 ######################################################
@@ -176,7 +249,6 @@ class AWSResourceTagger:
         if account_id not in self.session_cache:
             sts_client = boto3.client('sts')
             role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
-            
             try:
                 assumed_role = sts_client.assume_role(
                     RoleArn=role_arn,
@@ -321,16 +393,13 @@ class AWSResourceTagger:
         
         try:
 
-            # Initialize S3 client        
-            print(f"Downloading scripts from {bucket_name}/{zip_key}")
-
+            
             s3 = boto3.client('s3',region_name=region)
 
             # Create a temporary directory to store unzipped scripts            
             os.makedirs(self.script_path, exist_ok=True)
 
         
-
             # Get list of modules
             response = s3.list_objects_v2(Bucket=bucket_name)    
             modules = [
@@ -419,10 +488,9 @@ def lambda_handler(event, context):
     # Tag resources and get results
     results = tagger.tag_resources(resources, tags_string, tags_action)
     
-
     # Get summary results
     status_counter = Counter(item['status'] for item in results if 'status' in item)
-
+            
     update_query = """
     UPDATE tbprocess
     SET end_time_tagging = %s, status_tagging = %s, message_tagging = %s, resources_tagged_success = %s, resources_tagged_error = %s, action = %s
@@ -430,6 +498,9 @@ def lambda_handler(event, context):
     """
     ds.execute_dml(update_query, ((datetime.now()).strftime("%Y-%m-%d %H:%M:%S"), 'completed', json.dumps(status_counter), status_counter.get('success',0), status_counter.get('error',0), tags_action, scan_id))
 
+    error_items = [item for item in results if item.get('status') == 'error']
+    ds.save_tags_errors(scan_id, error_items)
+    
     return {
         'statusCode': 200,
         'body': json.dumps('success')

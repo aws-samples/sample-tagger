@@ -41,51 +41,6 @@ def get_service_types(account_id, region, service, service_type):
                 'nested': False,
                 'arn_format': 'arn:aws:rds:{region}:{account_id}:snapshot:{resource_id}',
                 'tag_list_field': 'TagList'
-            },
-            'SubnetGroup': {
-                'method': 'describe_db_subnet_groups',
-                'key': 'DBSubnetGroups',
-                'id_field': 'DBSubnetGroupName',
-                'date_field': None,
-                'nested': False,
-                'arn_format': 'arn:aws:rds:{region}:{account_id}:subgrp:{resource_id}',
-                'tag_list_field': None
-            },
-            'OptionGroup': {
-                'method': 'describe_option_groups',
-                'key': 'OptionGroupsList',
-                'id_field': 'OptionGroupName',
-                'date_field': None,
-                'nested': False,
-                'arn_format': 'arn:aws:rds:{region}:{account_id}:og:{resource_id}',
-                'tag_list_field': None
-            },
-            'DBClusterParameterGroup': {
-                'method': 'describe_db_cluster_parameter_groups',
-                'key': 'DBClusterParameterGroups',
-                'id_field': 'DBClusterParameterGroupName',
-                'date_field': None,
-                'nested': False,
-                'arn_format': 'arn:aws:rds:{region}:{account_id}:cluster-pg:{resource_id}',
-                'tag_list_field': None
-            },
-            'DBParameterGroup': {
-                'method': 'describe_db_parameter_groups',
-                'key': 'DBParameterGroups',
-                'id_field': 'DBParameterGroupName',
-                'date_field': None,
-                'nested': False,
-                'arn_format': 'arn:aws:rds:{region}:{account_id}:pg:{resource_id}',
-                'tag_list_field': None
-            },
-            'DBSecurityGroup': {
-                'method': 'describe_db_security_groups',
-                'key': 'DBSecurityGroups',
-                'id_field': 'DBSecurityGroupName',
-                'date_field': None,
-                'nested': False,
-                'arn_format': 'arn:aws:rds:{region}:{account_id}:secgrp:{resource_id}',
-                'tag_list_field': None
             }
         }
 
@@ -200,7 +155,9 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
                 'region': region,
                 'service': service,
                 'identifier': resource.identifier,
-                'status': 'success'
+                'arn': resource.arn,
+                'status': 'success',
+                'error' : ""
             })
             
         except Exception as e:
@@ -211,6 +168,7 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
                 'region': region,
                 'service': service,
                 'identifier': resource.identifier,
+                'arn': resource.arn,
                 'status': 'error',
                 'error': str(e)
             })    

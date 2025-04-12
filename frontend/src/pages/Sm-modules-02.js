@@ -44,7 +44,7 @@ function Application() {
         {id: 'resource_type',header: 'Type',cell: item => item['resource_type'],ariaLabel: createLabelFunction('resource_type'),sortingField: 'resource_type',},    
         {id: 'resource_id',header: 'Identifier',cell: item => item['resource_id'],ariaLabel: createLabelFunction('resource_id'),sortingField: 'resource_id',},
         {id: 'name',header: 'Name',cell: item => item['name'],ariaLabel: createLabelFunction('name'),sortingField: 'name',},
-        {id: 'creation',header: 'Creation',cell: item => item['creation'],ariaLabel: createLabelFunction('creation'),sortingField: 'creation',},    
+        {id: 'creation_date',header: 'Creation',cell: item => item['creation_date'],ariaLabel: createLabelFunction('creation_date'),sortingField: 'creation_date',},    
         {id: 'tags_number',header: 'Tags',cell: item => (       
               <a  href='#;' style={{ "text-decoration" : "none", "color": "inherit" }}  onClick={() => showTags(item) }>
                   <Badge color="blue">{item['tags_number']}</Badge>
@@ -53,7 +53,7 @@ function Application() {
         {id: 'arn',header: 'Arn',cell: item => item['arn'],ariaLabel: createLabelFunction('arn'),sortingField: 'arn',},          
     ];
 
-    const visibleContentResources = ['account_id', 'region', 'service', 'resource_type', 'resource_id', 'name', 'tags_number', 'metadata'];
+    const visibleContentResources = ['account_id', 'region', 'service', 'resource_type', 'resource_id','creation_date', 'name', 'tags_number', 'metadata'];
     const [datasetResources,setDatasetResources] = useState([]);
 
     // Modal Tags
@@ -69,10 +69,10 @@ function Application() {
     const [serviceItems, setServiceItems] = useState([]);
     const [processRunning,setProcessRunning] = useState(false);
 
-    var currentAccount = useRef("");
-    var currentRegion = useRef("");
-    const [inputAccount, setInputAccount] = useState("");
-    const [inputRegion, setInputRegion] = useState("");
+    var currentAccount = useRef("039783469744");
+    var currentRegion = useRef("us-east-1");
+    const [inputAccount, setInputAccount] = useState("039783469744");
+    const [inputRegion, setInputRegion] = useState("us-east-1");
     
 
     //--## Create API object
@@ -105,12 +105,10 @@ function Application() {
                       switch(api.status){
 
                           case 200:
-                                    var response = JSON.parse(api.responseText)?.['response'];   
-
+                                    var response = JSON.parse(api.responseText)?.['response'];                                       
                                     var services = response['services'];                          
                                     var items = [];
-                                    for (var index in services) {                                
-                                
+                                    for (var index in services) {                                                                        
                                         items.push(
                                           {
                                             label: services[index]['service'],

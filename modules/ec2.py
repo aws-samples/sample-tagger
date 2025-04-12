@@ -127,6 +127,38 @@ def get_service_types(account_id, region, service, service_type):
                 'date_field': None,
                 'nested': False,
                 'arn_format': 'arn:aws:ec2:{region}:{account_id}:customer-gateway/{resource_id}'
+            },
+            'TransitGateway': {
+                'method': 'describe_transit_gateways',
+                'key': 'TransitGateways',
+                'id_field': 'TransitGatewayId',
+                'date_field': 'CreationTime',
+                'nested': False,
+                'arn_format': 'arn:aws:ec2:{region}:{account_id}:transit-gateway/{resource_id}'
+            },
+            'TransitGatewayAttachment': {
+                'method': 'describe_transit_gateway_attachments',
+                'key': 'TransitGatewayAttachments',
+                'id_field': 'TransitGatewayAttachmentId',
+                'date_field': 'CreationTime',
+                'nested': False,
+                'arn_format': 'arn:aws:ec2:{region}:{account_id}:transit-gateway-attachment/{resource_id}'
+            },
+            'TransitGatewayRouteTable': {
+                'method': 'describe_transit_gateway_route_tables',
+                'key': 'TransitGatewayRouteTables',
+                'id_field': 'TransitGatewayRouteTableId',
+                'date_field': 'CreationTime',
+                'nested': False,
+                'arn_format': 'arn:aws:ec2:{region}:{account_id}:transit-gateway-route-table/{resource_id}'
+            },
+            'TransitGatewayVpcAttachment': {
+                'method': 'describe_transit_gateway_vpc_attachments',
+                'key': 'TransitGatewayVpcAttachments',
+                'id_field': 'TransitGatewayAttachmentId',
+                'date_field': 'CreationTime',
+                'nested': False,
+                'arn_format': 'arn:aws:ec2:{region}:{account_id}:transit-gateway-attachment/{resource_id}'
             }
         }
         
@@ -236,7 +268,9 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
                 'region': region,
                 'service': service,
                 'identifier': resource.identifier,
-                'status': 'success'
+                'arn': resource.arn,
+                'status': 'success',
+                'error' : ""
             })
             
         except Exception as e:
@@ -247,6 +281,7 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
                 'region': region,
                 'service': service,
                 'identifier': resource.identifier,
+                'arn': resource.arn,
                 'status': 'error',
                 'error': str(e)
             })    

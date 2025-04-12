@@ -1,5 +1,6 @@
 import {useState,useEffect,useRef, useCallback} from 'react'
 import { useNavigate } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom';
 
 import { configuration, SideMainLayoutHeader,SideMainLayoutMenu, breadCrumbs, tagEditorI18n } from './Configs';
 import { createLabelFunction } from '../components/Functions';
@@ -24,22 +25,22 @@ Alert,
 Checkbox,
 Wizard,
 Textarea,
+TokenGroup,
 Icon,
 KeyValuePairs,
-Badge,
-Link
+Badge
 } from '@cloudscape-design/components';
 
 import CustomHeader from "../components/Header";
 import CodeEditor01  from '../components/CodeEditor01';
 import CustomTable01 from "../components/Table01";
 import TokenGroupReadOnly01 from '../components/TokenGroupReadOnly01';
-import WhereClauseViewer01 from '../components/WhereClauseViewer01';
-
 
 
 function Application() {
   
+ 
+
   //-- Navigate object
   let navigate = useNavigate(); 
     
@@ -84,7 +85,9 @@ var txtRuleset = useRef("");
 const [selectedRuleSet,setSelectedRuleSet] = useState({});
 const [datasetRuleSet,setDatasetRuleSet] = useState([]);       
 
-var currentScanId = useRef("");
+//--## Get Parameters
+const [params]=useSearchParams();   
+var currentScanId = useRef(params.get("mtid"));
 
 //--## Tasks
 const timeoutRef = useRef(null);
@@ -104,6 +107,9 @@ const regionList = useRef([]);
 const serviceList = useRef([]);
 const tagList = useRef([]);
 
+const [inputAccounts, setInputAccounts] = useState("");
+const [inputRegions, setInputRegions] = useState("");
+const [inputServices, setInputServices] = useState("");
 
 const [selectedAction,setSelectedAction] = useState({ label: "Add tags", value: 1 });
 const actionTags = useRef(1);
@@ -147,11 +153,6 @@ const [metadata,setMetadata] = useState("");
 const [activeStepIndex,setActiveStepIndex] = useState(0);
 var currentStep = useRef(0);
 
-
-
-// Tag errors
-const [datasetTagErrors, setDatasetTagErrors] = useState([]);
-const [visibleTaggingErrors, setVisibleTaggingErrors] = useState(false);
 
 
 //--## Show tags for especifig resource
@@ -210,55 +211,34 @@ function createApiObject(object){
 
 
 
-//--## Handle WhereClause change
-const handleWhereClauseChange = useCallback((newValue) => {    
-    console.log("changed");
-}, []);
-
 
 //--## Gather Profiles
-async function gatherProfiles(){
+async function gatherMetadataInformation(){
   try {
         
         var parameters = {                         
-                        processId : "12-get-profiles"
+                        processId : "15-get-dataset-metadata-information",
+                        scanId : currentScanId.current
         };        
 
         const api = createApiObject({ method : 'POST', async : true });          
         api.onload = function() {                    
                   if (api.status === 200) {    
-
-                      var response = JSON.parse(api.responseText)?.['response'];                                                       
-                        
-                      const profiles = response.sort((a, b) => 
-                          a.jsonProfile.name.localeCompare(b.jsonProfile.name)
-                      );
-
-                      var items = [];
-                      profiles.forEach(element => {
-                          items.push({ label: element['jsonProfile']['name'], value: element['profileId'], parameters : JSON.stringify(element['jsonProfile'],null,4) });
-                      });            
-                      
-                      
-                      if ( items.length > 0 ){
-
-                            txtRuleset.current = items[0]['parameters'];
-                            refreshParameters(JSON.parse(items[0]['parameters']));
-                            setSelectedRuleSet(items[0]);                      
-                      }
-                      
-                      setDatasetRuleSet(items);                             
+                      var response = JSON.parse(api.responseText)?.['response'];                                                                               
+                      var parameters = JSON.parse(response['processes']['parameters']);                                                  
+                      refreshParameters(parameters);          
 
                   }
         };
         api.send(JSON.stringify({ parameters : parameters }));  
+
 
    
         
   }
   catch(err){
         console.log(err);
-        console.log('Timeout API error - PID: 12-get-profiles');                  
+        console.log('Timeout API error - PID: 15-get-dataset-metadata-information');                  
   }
 };
 
@@ -268,50 +248,14 @@ async function gatherProfiles(){
 //--## Refresh Discovery parameters
 function refreshParameters(parameters){
 
-        //-- Create option list accounts    
-
-        var accounts = [];
-        parameters['accounts'].forEach( element => {
-          accounts.push({ label: element, value: element });
-        });
-        setSelectedAccounts(accounts);
-        accountList.current = accounts;
-
-        
-        //-- Create option list regions    
-
-        var regions = [];
-        parameters['regions'].forEach( element => {
-          regions.push({ label: element, value: element });
-        });
-        setSelectedRegions(regions);
-        regionList.current = regions;
-
-        
-        //-- Create option list services
-
-        var services = [];
-        parameters['services'].forEach( element => {
-          services.push({ label: element, value: element });
-        });
-        setSelectedServices(services);
-        serviceList.current = services;
-
         //-- Create tag list
-
         var tags = [];
         parameters['tags'].forEach( element => {
           tags.push({ key: element['key'], value: element['value'] });
         });
         setSelectedTags(tags);
         tagList.current = tags;
-
-
-        //-- Filters
-        
-        setSelectedFilter(parameters['filter']);
-        filterList.current = parameters['filter'];
-
+       
 }
 
 
@@ -339,10 +283,11 @@ async function getScanResults(){
             var parameters = {                         
                             processId : "01-get-metadata-results", 
                             scanId : currentScanId.current,
-                            ruleset : JSON.parse(txtRuleset.current),
+                            ruleset : txtRuleset.current,
                             action : filterAction.current                        
             };        
             
+            console.log(parameters);
 
             const api = createApiObject({ method : 'POST', async : true });          
             api.onload = function() {                    
@@ -368,35 +313,6 @@ async function getScanResults(){
       }
 };
 
-
-//--## Get tagging errors 
-async function getTaggingErrors(){
-  try {
-       
-        var parameters = {                         
-                        processId : "23-get-tagging-errors", 
-                        scanId : currentScanId.current,                       
-        };        
-        
-
-        const api = createApiObject({ method : 'POST', async : true });          
-        api.onload = function() {                    
-                  if (api.status === 200) {    
-                      var response = JSON.parse(api.responseText)?.['response'];                      
-                      setDatasetTagErrors(response['resources']);  
-                      setVisibleTaggingErrors(true);                        
-
-
-                  }
-        };
-        api.send(JSON.stringify({ parameters : parameters }));            
-        
-  }
-  catch(err){
-        console.log(err);
-        console.log('Timeout API error - PID: 23-get-tagging-errors');                  
-  }
-};
 
 
 //--## Update resource action
@@ -430,43 +346,6 @@ async function updateResourceAction(){
 
 
 
-//--## Get Search Status
-const getMetadataSearchStatus = useCallback(async () => {
-      
-      try {
-          
-          var parameters = {                         
-                          processId : "03-get-metadata-search-status", 
-                          scanId : currentScanId.current
-          };        
-          
-          const api = createApiObject({ method : 'POST', async : true });          
-          api.onload = function() {                    
-                    if (api.status === 200) {    
-                        var response = JSON.parse(api.responseText)?.['response'];         
-                        if (response['status'] === 'completed') {
-                            setSearchStatus('completed');         
-                            showMessage({ type : "success", content : `Search process ${currentScanId.current} has been completed. Resources found (${response['resources']}).` });                                         
-                            getScanResults();
-                        } else if (response['status'] === 'failed') {
-                            setSearchStatus('failed');
-                        } else {
-                          // If the task is still pending, schedule another check
-                          timeoutRef.current = setTimeout(getMetadataSearchStatus, 5000); // Check again after 5 seconds
-                        }                                           
-                        
-                    }
-          };
-          api.send(JSON.stringify({ parameters : parameters })); 
-
-      } catch (err) {
-        console.log('Timeout API error - PID: 03-get-metadata-search-status');  
-        console.error(err);
-      }
-}, []);
-
-
-
 //--## Get tagging status
 const getTaggingProcessStatus = useCallback(async () => {      
   
@@ -484,41 +363,7 @@ const getTaggingProcessStatus = useCallback(async () => {
                     var message = JSON.parse(response['message']);                     
                     if (response['status'] === 'completed') {
                         setTaggingStatus('completed');   
-                        if (( message['error'] || 0) == 0 ){
-                          showMessage({ type : "success", content : `Tagging process ${currentScanId.current} has been completed. Success (${message['success'] || 0 }), Errors (${message['error'] || 0 }).` });                        
-                        }
-                        else{
-                          showMessage({ 
-                                        type : "error", 
-                                        content : (
-                                          <>
-                                              Tagging process {currentScanId.current} has been completed. Success ({message['success'] || 0 }), Errors ({message['error'] || 0 }). 
-                                              <Link 
-                                                    color="inverted" 
-                                                    onFollow={() => {
-                                                            getTaggingErrors();
-                                                    }}               
-
-                                                >
-                                                View errors.
-                                              </Link>
-                                          </>
-                                        )
-                          });                        
-                          /*
-                          setApplicationMessage([
-                                {
-                                  type: object.type,
-                                  content: object.content,
-                                  dismissible: true,
-                                  dismissLabel: "Dismiss message",
-                                  onDismiss: () => setApplicationMessage([]),
-                                  id: "message_1"
-                                }
-                          ]);*/
-                          
-                        }
-                        
+                        showMessage({ type : "success", content : `Tagging process ${currentScanId.current} has been completed. Success (${message['success'] || 0 }), Errors (${message['error'] || 0 }).` });                        
                     } else if (response['status'] === 'failed') {
                         setTaggingStatus('failed');
                     } else {                      
@@ -536,54 +381,6 @@ const getTaggingProcessStatus = useCallback(async () => {
 }, []);
 
 
-
-
-//--## Create search process
-const handleCreateMetadataSearch = useCallback(() => {
-      
-      try {
-       
-            setDatasetResources([]);
-            setSearchStatus("in-progress");
-
-            var scanId = ((new Date().toISOString().replace("T",".").substring(0, 19)).replaceAll(":","")).replaceAll("-","");
-            currentScanId.current = scanId;
-            
-            var ruleset = JSON.parse(txtRuleset.current);            
-            ruleset['accounts'] = accountList.current;
-            ruleset['regions'] = regionList.current;
-            ruleset['services'] = serviceList.current;
-            ruleset['tags'] = tagList.current;
-            ruleset['action'] = actionTags.current;
-            ruleset['filter'] = filterList.current;
-
-            var parameters = {                         
-                            processId : "02-create-metadata-search", 
-                            scanId : scanId,
-                            name : "system-generated",
-                            ruleset : ruleset,
-                            action : 1,
-                            type : 1
-            };        
-            
-
-            const api = createApiObject({ method : 'POST', async : true });          
-            api.onload = function() {                    
-                      if (api.status === 200) {    
-                          var response = JSON.parse(api.responseText)?.['response'];                                                                      
-                          getMetadataSearchStatus();         
-                      }
-            };
-            api.send(JSON.stringify({ parameters : parameters }));   
-            
-            
-      }
-      catch(err){
-            console.log(err);
-            console.log('Timeout API error - PID: 02-create-metadata-search');                  
-      }
-      
-}, [getMetadataSearchStatus]);
 
 
 
@@ -621,11 +418,6 @@ const handleStartTaggingProcess = useCallback(() => {
 
 
 
-//--## Goto to main dashboard
-function handleGotoDashboard(){
-  navigate('/dashboard');
-}
-
 //--## Convert list of tags to tokens
 const convertTagsToTokens = (tags) => {
   if (tags.length > 0) {
@@ -638,9 +430,15 @@ const convertTagsToTokens = (tags) => {
 };
 
 
+//--## Goto to compliance page
+function handleGotoDashboard(){
+  navigate('/compliance');
+}
+
+
   //--## Init method
   useEffect(() => {
-        gatherProfiles();        
+      gatherMetadataInformation();        
     }, []);
     
        
@@ -657,7 +455,11 @@ const convertTagsToTokens = (tags) => {
             content={
                       <div style={{"padding" : "1em"}}>
                         
+                        <br/>                        
                         <br/>
+                        <Header variant="h1">
+                            Identifier :  {currentScanId.current}                                     
+                        </Header>
                         <Wizard
                           i18nStrings={{
                                         stepNumberLabel: stepNumber =>
@@ -678,7 +480,7 @@ const convertTagsToTokens = (tags) => {
                             currentStep.current = detail.requestedStepIndex;
                             if (detail.requestedStepIndex == 1)
                             {
-                              //gatherInventoryResources();
+                               getScanResults();
                             }
                             setApplicationMessage([]);
                             
@@ -691,173 +493,49 @@ const convertTagsToTokens = (tags) => {
                           }
                           activeStepIndex={activeStepIndex}
                           isLoadingNextStep={ ( searchStatus== "in-progress"  ? true : false ) }
-                          steps={[                            
-                            {
-                              title: "Select a profile",
-                              description: "Select a profile to be used by the tagging process.",
-                              content: (
-                                        <Container>
-                                                <table style={{"width":"100%"}}>
-                                                  <tr>  
-                                                      <td valign="middle" style={{"width":"25%", "padding-right": "2em", "text-align": "center"}}>  
-                                                        <FormField label={"Profiles"}>
-                                                            <Select
-                                                                      selectedOption={selectedRuleSet}
-                                                                      onChange={({ detail }) => {
-                                                                        setSelectedRuleSet(detail.selectedOption);
-                                                                        txtRuleset.current = detail.selectedOption['parameters'];    
-                                                                        refreshParameters(JSON.parse(detail.selectedOption['parameters']));                                                                                                                                                          
-                                                                      }}
-                                                                      options={datasetRuleSet}
-                                                            />
-                                                        </FormField>
-                                                      </td>
-                                                      <td valign="middle" style={{"width":"15%", "padding-right": "2em", "text-align": "center"}}>  
-                                                        
-                                                      </td>                                        
-                                                  </tr>
-                                                </table>  
-                                                <br/>  
-
-                                                
-                                                {/* ----### Accounts  */}                          
-                                                <Container
-                                                  header={
-                                                          <Header variant="h2" description="List of AWS accounts defined in-scope for the profile">
-                                                              Accounts
-                                                          </Header>
-                                                }
-                                                >
-                                                      <SpaceBetween size="m">
-                                                          <TokenGroupReadOnly01
-                                                              items={selectedAccounts}                                     
-                                                              limit={10}
-                                                          />                                    
-                                                      </SpaceBetween>
-                                                      
-                                                </Container>
-                                                <br/>
-
-
-
-                                                {/* ----### Regions  */}                          
-                                                <Container
-                                                  header={
-                                                          <Header variant="h2" description="List of AWS regions defined in-scope for the profile">
-                                                              Regions
-                                                          </Header>
-                                                }
-                                                >
-                                                      <SpaceBetween size="m">                                      
-                                                          <TokenGroupReadOnly01
-                                                            items={selectedRegions}                                     
-                                                            limit={10}
-                                                          />                                                                 
-                                                      </SpaceBetween>                                    
-                                                </Container>
-                                                <br/>
-
-                                                
-                                                
-                                                {/* ----### Services  */}                          
-                                                <Container
-                                                        header={
-                                                                <Header variant="h2" description="List of AWS services defined in-scope for the profile">
-                                                                    Services
-                                                                </Header>
-                                                      }
-                                                      >
-                                                      <SpaceBetween size="m">                                                              
-                                                          <TokenGroupReadOnly01
-                                                            items={selectedServices}                                     
-                                                            limit={10}
-                                                          />       
-                                                      </SpaceBetween>                                    
-                                                </Container>
-                                                <br/>                                                                                             
-                                                
-
-
-                                                {/* ----### FILTER  */}                                                
-                                                <Container
-                                                      header={
-                                                              <Header variant="h2" description="List of conditions to filter AWS resources">
-                                                                  Advanced filtering
-                                                              </Header>
-                                                    }
-                                                >
-                                                      <WhereClauseViewer01
-                                                        value={selectedFilter} 
-                                                        readOnly={true}
-                                                      />
-
-                                                </Container>                                                    
-                                              
-                                        </Container>
-                              )
-                            },              
+                          steps={[                                                        
                             {
                               title: "Manage tags",
                               description: "Select action to be performed and define list of tags for resources selected.",
                               content: (
                                         <Container>
                                           <FormField label={"Action"}>
-                                              <Select
-                                                  selectedOption={selectedAction}
-                                                  onChange={({ detail }) => {
-                                                      setSelectedAction(detail.selectedOption);
-                                                      actionTags.current = detail.selectedOption['value'];
-                                                    }
-                                                  }
-                                                  options={[
-                                                    { label: "Add tags", value: 1, iconName: "status-positive" },
-                                                    { label: "Remove tags", value: 2, iconName: "status-negative" }
-                                                  ]}
-                                              />
-                                              <br/>
-                                          </FormField>
+                                          <Select
+                                              selectedOption={selectedAction}
+                                              onChange={({ detail }) => {
+                                                  setSelectedAction(detail.selectedOption);
+                                                  actionTags.current = detail.selectedOption['value'];
+                                                }
+                                              }
+                                              options={[
+                                                { label: "Add tags", value: 1, iconName: "status-positive" },
+                                              ]}
+                                          />
+                                          <br/>
+                                          </FormField>                                         
                                           <FormField label={"Tags"}>
-                                                <TokenGroupReadOnly01
-                                                  items={convertTagsToTokens(selectedTags)}                                     
-                                                  limit={10}
-                                                />          
-                                          </FormField>                                                                                                         
+                                              <TokenGroupReadOnly01
+                                                      items={convertTagsToTokens(selectedTags)}                                     
+                                                      limit={10}
+                                              />                          
+                                          </FormField>  
                                       </Container>
 
                               )
                             },
                             {
-                              title: "Search resources",
-                              description: "Click on Search resources to start scanning process, later you can review resources discovered, define to which ones apply tag actions, this definition will be used by tagging process.",
+                              title: "Resources",
+                              description: "Review resources discovered, define to which ones apply tag actions, this definition will be used by tagging process.",
                               content: (
-                                <div>                                    
-                                    <Button 
-                                          variant="primary" 
-                                          onClick={() => {
-                                                  accountList.current =  selectedAccounts.map(obj => obj.value);
-                                                  regionList.current =  selectedRegions.map(obj => obj.value);
-                                                  serviceList.current =  selectedServices.map(obj => obj.value);                                                                                                                                                      
-                                                  handleCreateMetadataSearch();
-                                            }                                              
-                                          } 
-                                          disabled={(searchStatus=="in-progress" ? true : false )}
-                                          loading={(searchStatus=="in-progress" ? true : false )}
-                                    >
-                                          Search resources                                         
-
-                                    </Button>
-                                    <br/>
-                                    <br/>
-                                    <Flashbar items={applicationMessage} />
-                                    <br/>                                             
+                                <div>                                                                       
                                     <Container>
                                         <CustomTable01
                                             columnsTable={columnsTableResources}
                                             visibleContent={visibleContentResources}
                                             dataset={datasetResources}
-                                            title={"Resource search results - " + currentScanId.current }
+                                            title={"Resources"}
                                             description={""}
-                                            pageSize={10}
+                                            pageSize={20}
                                             onSelectionItem={( item ) => {                                                                                    
                                                 resourceId.current = item[0];                                                
                                               }
@@ -995,7 +673,7 @@ const convertTagsToTokens = (tags) => {
                                                                   loading={(taggingStatus=="in-progress" ? true : false )}
                                                                   style={{ "width": "600px"}}
                                                                 >
-                                                                  { ( selectedAction['value'] == 1 ? "Add tags" : "Remove tags")}
+                                                                  { ( selectedAction['value'] == 1 ? "Start adding tags" : "Start removing tags")}
                                                                 </Button>
                                                               </SpaceBetween>
                                                             </Box>
@@ -1077,33 +755,6 @@ const convertTagsToTokens = (tags) => {
               <CodeEditor01
                 format={"json"}
                 value={metadata}
-                readOnly={true}
-              />
-          </Modal>
-
-
-          <Modal
-            onDismiss={() => setVisibleTaggingErrors(false)}
-            visible={visibleTaggingErrors}
-            footer={
-              <Box float="right">
-                <SpaceBetween direction="horizontal" size="xs">
-                    <Button variant="primary"  
-                              onClick={() => { 
-                                setVisibleTaggingErrors(false);
-                                    }}
-                      >
-                          Close
-                      </Button>                     
-                </SpaceBetween>
-              </Box>
-            }
-            header="Tagging errors"
-            size="max"
-          >
-              <CodeEditor01
-                format={"json"}
-                value={JSON.stringify(datasetTagErrors,null,4)}
                 readOnly={true}
               />
           </Modal>

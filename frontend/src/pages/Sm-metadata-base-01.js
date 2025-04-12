@@ -18,10 +18,14 @@ import {
   Modal,
   Input,
   TokenGroup,
-  Link
+  Link,
+  Container
 } from '@cloudscape-design/components';
 
 import { createLabelFunction, customFormatNumberShort } from '../components/Functions';
+import TokenGroupReadOnly01 from '../components/TokenGroupReadOnly01';
+import WhereClauseViewer01 from '../components/WhereClauseViewer01';
+
 
 //import '@aws-amplify/ui-react/styles.css';
 
@@ -62,10 +66,12 @@ function Application() {
   const [selectedAccounts,setSelectedAccounts] = useState([]);
   const [selectedRegions,setSelectedRegions] = useState([]);
   const [selectedServices,setSelectedServices] = useState([]);
+  const [selectedFilterText,setSelectedFilterText] = useState("");
   
   const accountList = useRef([]);
   const regionList = useRef([]);
   const serviceList = useRef([]);
+  const filterListText = useRef("");
   
   const [inputAccounts, setInputAccounts] = useState("");
   const [inputRegions, setInputRegions] = useState("");
@@ -123,6 +129,10 @@ function Application() {
           });
           setSelectedServices(services);
           serviceList.current = services;     
+
+          setSelectedFilterText(parameters['filter']);
+          filterListText.current = parameters['filter'];
+
           
       
     }
@@ -179,7 +189,8 @@ function Application() {
       try {
           
             var parameters = {                         
-                            processId : "13-get-dataset-metadata-bases"           
+                  processId : "13-get-dataset-metadata-bases",
+                  type : 2
             };        
             
 
@@ -206,7 +217,6 @@ function Application() {
         currentMetadataBaseName.current = mtBaseName;         
         setMetadataBaseName(mtBaseName);
         setVisibleCreateMetadataBase(true);         
-
     }
     
 
@@ -224,7 +234,7 @@ function Application() {
                 ruleset['services'] = serviceList.current;               
                 ruleset['tags'] = [];
                 ruleset['action'] = 0;
-                ruleset['filter'] = "";
+                ruleset['filter'] = filterListText.current;
 
                 var parameters = {                         
                                 processId : "02-create-metadata-search", 
@@ -490,102 +500,80 @@ function Application() {
                     </tr>
                   </table>  
                   <br/>  
-                  <FormField label={"Accounts"} description="Set the AWS accounts used as source for metadata base.">
-                      <Input
-                        onChange={({ detail }) => {
-                                  
-                                    setInputAccounts(detail.value);                                                                  
-                                  }
-                        }
-                        value={inputAccounts}
-                        onKeyDown={({ detail }) => {
-                          if (detail.keyCode == 13){
-                                var newItems = [];
-                                var listValues = inputAccounts.split(",");
-                                for (var i = 0; i < listValues.length; i++) {
-                                    if (listValues[i].trim() != "") {
-                                      newItems.push({ label : listValues[i].trim(), value : listValues[i].trim() });
-                                    }
-                                }
-                                setSelectedAccounts([...selectedAccounts,...newItems]);                                
-                                setInputAccounts("");                                                                                                                         
-                          }                                                       
-                        }
-                      }
-                      />
-                      <TokenGroup
-                        onDismiss={({ detail: { itemIndex } }) => {
-                          setSelectedAccounts([
-                            ...selectedAccounts.slice(0, itemIndex),
-                            ...selectedAccounts.slice(itemIndex + 1)
-                          ]);
-                        }}
-                        items={selectedAccounts}
-                        limit={10}
-                      />
-                  </FormField>
+
+
+                   {/* ----### Accounts  */}                          
+                   <Container
+                    header={
+                            <Header variant="h2" description="List of AWS accounts defined in-scope for the profile">
+                                Accounts
+                            </Header>
+                  }
+                  >
+                        <SpaceBetween size="m">
+                            <TokenGroupReadOnly01
+                                items={selectedAccounts}                                     
+                                limit={10}
+                            />                                    
+                        </SpaceBetween>
+                        
+                  </Container>
                   <br/>
-                  <FormField label={"Regions"} description="Set the AWS regions in scope for the metadata base.">                                                  
-                      <Input
-                        onChange={({ detail }) => setInputRegions(detail.value)}
-                        value={inputRegions}
-                        onKeyDown={({ detail }) => {
-                          if (detail.keyCode == 13){
-                                var newItems = [];
-                                var listValues = inputRegions.split(",");
-                                for (var i = 0; i < listValues.length; i++) {
-                                    if (listValues[i].trim() != "") {
-                                      newItems.push({ label : listValues[i].trim(), value : listValues[i].trim() });
-                                    }
-                                }
-                                setSelectedRegions([...selectedRegions, ...newItems]);
-                                setInputRegions("");
-                          }                                                       
+
+
+
+                  {/* ----### Regions  */}                          
+                  <Container
+                    header={
+                            <Header variant="h2" description="List of AWS regions defined in-scope for the profile">
+                                Regions
+                            </Header>
+                  }
+                  >
+                        <SpaceBetween size="m">                                      
+                            <TokenGroupReadOnly01
+                              items={selectedRegions}                                     
+                              limit={10}
+                            />                                                                 
+                        </SpaceBetween>                                    
+                  </Container>
+                  <br/>
+
+                  
+                  
+                  {/* ----### Services  */}                          
+                  <Container
+                          header={
+                                  <Header variant="h2" description="List of AWS services defined in-scope for the profile">
+                                      Services
+                                  </Header>
                         }
+                        >
+                        <SpaceBetween size="m">                                                              
+                            <TokenGroupReadOnly01
+                              items={selectedServices}                                     
+                              limit={10}
+                            />       
+                        </SpaceBetween>                                    
+                  </Container>
+                  <br/>                                                                                             
+                  
+
+
+                  {/* ----### FILTER  */}                                                
+                  <Container
+                        header={
+                                <Header variant="h2" description="List of conditions to filter AWS resources">
+                                    Advanced filtering
+                                </Header>
                       }
-                      />
-                      <TokenGroup
-                        onDismiss={({ detail: { itemIndex } }) => {
-                          setSelectedRegions([
-                            ...selectedRegions.slice(0, itemIndex),
-                            ...selectedRegions.slice(itemIndex + 1)
-                          ]);
-                        }}
-                        items={selectedRegions}
-                        limit={10}
-                      />
-                  </FormField>                                        
-                  <br/>                  
-                  <FormField label={"Services"} description="Set the AWS services in scope for the metadata base.">                                                  
-                      <Input
-                        onChange={({ detail }) => setInputServices(detail.value)}
-                        value={inputServices}
-                        onKeyDown={({ detail }) => {
-                          if (detail.keyCode == 13){
-                                var newItems = [];
-                                var listValues = inputServices.split(",");
-                                for (var i = 0; i < listValues.length; i++) {
-                                    if (listValues[i].trim() != "") {
-                                      newItems.push({ label : listValues[i].trim(), value : listValues[i].trim() });
-                                    }
-                                }
-                                setSelectedServices([...selectedServices, ...newItems]);
-                                setInputServices("");
-                          }                                                       
-                        }
-                      }
-                      />
-                      <TokenGroup
-                        onDismiss={({ detail: { itemIndex } }) => {
-                          setSelectedServices([
-                            ...selectedServices.slice(0, itemIndex),
-                            ...selectedServices.slice(itemIndex + 1)
-                          ]);
-                        }}
-                        items={selectedServices}
-                        limit={10}
-                      />
-                  </FormField>
+                  >
+                        <WhereClauseViewer01
+                          value={selectedFilterText} 
+                          readOnly={true}
+                        />
+
+                  </Container>      
             </Modal>
 
             <Modal

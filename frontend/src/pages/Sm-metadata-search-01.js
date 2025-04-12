@@ -26,6 +26,7 @@ import {
 import { createLabelFunction, customFormatNumberShort } from '../components/Functions';
 
 import CodeEditor01  from '../components/CodeEditor01';
+import WhereClauseBuilder01 from '../components/WhereClauseBuilder01';
 
 
 function Application() {
@@ -37,15 +38,18 @@ function Application() {
     const metadataIdentifier=params.get("mtid");  
   
 
+    const [sqlWhereClause, setSqlWhereClause] = useState('');  
+
 
     //-- Application messages
     const [applicationMessage, setApplicationMessage] = useState([]);   
     
-    var currentConditional = useRef("POSITION('subnet-03bff4b2b43b0d393' in metadata) > 0");
+    //var currentConditional = useRef("POSITION('subnet-03bff4b2b43b0d393' in metadata) > 0");
+    var currentConditional = useRef("");
   
 
     // Table variables Workload
-  const columnsTableResources = [
+    const columnsTableResources = [
         //{id: 'account',header: 'Account',cell: item => "1234567890",ariaLabel: createLabelFunction('account'),sortingField: 'account',},
         {id: 'account',header: 'Account',cell: item => item['account'],ariaLabel: createLabelFunction('account'),sortingField: 'account',},
         {id: 'region',header: 'Region',cell: item => item['region'],ariaLabel: createLabelFunction('region'),sortingField: 'region',},
@@ -99,6 +103,14 @@ function Application() {
         xhr.setRequestHeader("Content-Type","application/json");            
         return xhr;
     }
+
+
+    //--## Handle WhereClause change
+    const handleWhereClauseChange = useCallback((newValue) => {    
+      setSqlWhereClause(newValue);    
+      currentConditional.current = newValue;    
+    }, []);
+
 
 
     //--## Get Metadata Information
@@ -281,40 +293,31 @@ function Application() {
                             />            
                           <br/>
                           <Container
-                                    header={
-                                      <Header
-                                        variant="h2"
-                                        description="Write conditions for metadata search using PostgreSQL compatible language."
-                                        info={<Link variant="info">Info</Link>}
-                                      >
-                                        Conditional editor
-                                      </Header>
-                                    }
-                          >                              
-                              <CodeEditor01
-                                format={"sql"}
-                                value={currentConditional.current}
-                                readOnly={false}                               
-                                  onChange={ ( item ) => { 
-                                      currentConditional.current = item;                                      
+                                header={
+                                        <Header variant="h1" description="Write conditions to filter resources">
+                                            Filter editor
+                                        </Header>
+                              }
+                          >
+                                <WhereClauseBuilder01
+                                  onChange={handleWhereClauseChange} 
+                                  value={sqlWhereClause} 
+                                  readOnly={false}
+                                />
+                                <Box float="right">
+                                  <SpaceBetween direction="horizontal" size="xs">
+                                        <Button variant="primary" 
+                                                      onClick={() => { 
+                                                        getMetadataResources();
+                                                    }}
+                                        >
+                                            Search
+                                        </Button>                                             
+                                  </SpaceBetween>
+                                </Box>
+                                <br/>
 
-                                  } }                   
-                                  height={200}               
-                              />
-                              <br/>
-                              <Box float="right">
-                              <SpaceBetween direction="horizontal" size="xs">
-                                    <Button variant="primary" 
-                                                  onClick={() => { 
-                                                    getMetadataResources();
-                                                }}
-                                    >
-                                        Search
-                                    </Button>                                             
-                              </SpaceBetween>
-                            </Box>
-                            <br/>
-                          </Container>
+                          </Container>                            
                           <br/>                             
                           <Container>
                               <CustomTable01
