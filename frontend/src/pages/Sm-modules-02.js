@@ -69,10 +69,10 @@ function Application() {
     const [serviceItems, setServiceItems] = useState([]);
     const [processRunning,setProcessRunning] = useState(false);
 
-    var currentAccount = useRef("039783469744");
-    var currentRegion = useRef("us-east-1");
-    const [inputAccount, setInputAccount] = useState("039783469744");
-    const [inputRegion, setInputRegion] = useState("us-east-1");
+    var currentAccount = useRef("");
+    var currentRegion = useRef("");
+    const [inputAccount, setInputAccount] = useState("");
+    const [inputRegion, setInputRegion] = useState("");
     
 
     //--## Create API object
