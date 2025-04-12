@@ -358,7 +358,7 @@ Resources:
                                 "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-api:*",
                                 "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-tagger:*",
                                 "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-initdb:*"
-                            ]                            
+                            ],                            
                             "Effect": "Allow"
                         },                      
                         {                            
