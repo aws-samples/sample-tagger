@@ -130,7 +130,7 @@ Resources:
         Type: "AWS::IAM::Role"
         Properties:
             Path: "/"
-            RoleName: "MAPTaggingProcessRole"
+            RoleName: "IAMRoleTaggerSolution"
             AssumeRolePolicyDocument: !Sub |
                 {
                     "Version": "2012-10-17",
