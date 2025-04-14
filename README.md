@@ -52,11 +52,11 @@ Key Components:
 
 
 #### Benefits:
-    - Enhanced security through network isolation
-    - Access restricted to users within the VPC or through VPC endpoints
-    - Reduced attack surface by eliminating direct internet exposure
-    - Complies with strict network security requirements
-    - Suitable for sensitive environments and regulated industries
+- Enhanced security through network isolation
+- Access restricted to users within the VPC or through VPC endpoints
+- Reduced attack surface by eliminating direct internet exposure
+- Complies with strict network security requirements
+- Suitable for sensitive environments and regulated industries
 
 
 ### Public Deployment Architecture
@@ -94,12 +94,12 @@ Key Components:
     - Principle of least privilege enforced throughout
 
 #### Benefits:
-    - Simplified accessibility from anywhere with internet access
-    - Web Application Firewall provides security for internet-facing resources
-    - IP filtering capabilities for controlled access
-    - Easier onboarding for users outside your corporate network
-    - Reduced network infrastructure complexity
-    - Suitable for less restrictive environments and broader user bases
+- Simplified accessibility from anywhere with internet access
+- Web Application Firewall provides security for internet-facing resources
+- IP filtering capabilities for controlled access
+- Easier onboarding for users outside your corporate network
+- Reduced network infrastructure complexity
+- Suitable for less restrictive environments and broader user bases
 
 
 
