@@ -51,7 +51,7 @@ Key Components:
     - Principle of least privilege enforced throughout
 
 
-##### Benefits:
+#### Benefits:
     - Enhanced security through network isolation
     - Access restricted to users within the VPC or through VPC endpoints
     - Reduced attack surface by eliminating direct internet exposure
@@ -94,12 +94,12 @@ Key Components:
     - Principle of least privilege enforced throughout
 
 #### Benefits:
-- Simplified accessibility from anywhere with internet access
-- Web Application Firewall provides security for internet-facing resources
-- IP filtering capabilities for controlled access
-- Easier onboarding for users outside your corporate network
-- Reduced network infrastructure complexity
-- Suitable for less restrictive environments and broader user bases
+    - Simplified accessibility from anywhere with internet access
+    - Web Application Firewall provides security for internet-facing resources
+    - IP filtering capabilities for controlled access
+    - Easier onboarding for users outside your corporate network
+    - Reduced network infrastructure complexity
+    - Suitable for less restrictive environments and broader user bases
 
 
 
@@ -147,55 +147,55 @@ A startup uses the metadata search feature to quickly locate underutilized resou
 
 Follow these step-by-step instructions to configure and deploy the Taggr Solution Frontend into your AWS account using CloudFormation.
 
-1.- Sign in to the AWS Management Console
+1. Sign in to the AWS Management Console
     - Navigate to the AWS Console (https://console.aws.amazon.com )
     - Sign in with your credentials
 
-2.- Navigate to the AWS CloudFormation service
+2. Navigate to the AWS CloudFormation service
     - From the AWS Console, search for "CloudFormation" in the search bar
     - Click on the CloudFormation service
 
 
-3.- Start Stack Creation
+3. Start Stack Creation
     - Click the "Create stack" button
     - Select "With new resources (standard)"
 
 
-4.- Specify Template Source
+4. Specify Template Source
     - Choose "Upload a template file"
     - Click "Choose file" and select your CloudFormation template file
     - Click "Next"
 
-5.- Specify Stack Details
+5. Specify Stack Details
     - Enter a meaningful name for the stack in the "Stack name" field (e.g., "tagger-solution-frontend")
 
 
-6.- Configure General Configuration Parameters
+6. Configure General Configuration Parameters
     - GitHubRepositoryUrl: Enter the HTTPS URL for your GitHub repository where the Taggr Solution code is stored
     - AppUser: Enter the email address that will be used for the application user (e.g., admin@example.com )
 
-7.- Configure Network and Security Parameters
+7. Configure Network and Security Parameters
     - WAFRequired: Select "true" if you want to enable AWS WAF protection, or "false" to disable it
     - IPv4CIDR: (Optional, required only if WAF is enabled) Enter the IPv4 CIDR range that should be allowed access (e.g., 192.168.1.0/24)
     - IPv6CIDR: (Optional, required only if WAF is enabled) Enter the IPv6 CIDR range that should be allowed access (e.g., 2605:59c8:731d:4810:415:bd81:f251:f260/128)
 
 
-8.- Configure Stack Options (Optional)
+8. Configure Stack Options (Optional)
     - Add any tags to help identify and manage your stack resources
     - Configure advanced options if needed (notifications, stack policy, rollback configuration, etc.)
     - Click "Next"
 
-9.- Review Stack Configuration
+9. Review Stack Configuration
     - Review all the parameters and settings for your stack
     - Scroll down and check the acknowledgment box that states "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
     - Click "Create stack"
 
-10 .- Monitor Stack Creation
+10. Monitor Stack Creation
     - The CloudFormation console will display the stack creation status
     - View the "Events" tab to monitor the progress and troubleshoot any issues
     - Wait until the stack status changes to "CREATE_COMPLETE"
 
-11.- Access Stack Outputs
+11. Access Stack Outputs
     - Once the stack creation is complete, navigate to the "Outputs" tab
     - Here you'll find important information such as the URL to access the frontend application
     - Log in using the provided application user email (you may receive temporary credentials via email)
@@ -207,64 +207,64 @@ Follow these step-by-step instructions to configure and deploy the Taggr Solutio
 
 Follow these step-by-step instructions to configure and deploy the Taggr Solution Frontend into your AWS account using CloudFormation.
 
-1.- Sign in to the AWS Management Console
+1. Sign in to the AWS Management Console
     - Navigate to the AWS Console (https://console.aws.amazon.com )
     - Sign in with your credentials
 
 
 
-2.- Navigate to the AWS CloudFormation service
+2. Navigate to the AWS CloudFormation service
         - From the AWS Console, search for "CloudFormation" in the search bar
         - Click on the CloudFormation service
 
 
-3.- Start Stack Creation
+3. Start Stack Creation
     - Click the "Create stack" button
     - Select "With new resources (standard)"
 
-4.- Specify Template Source
+4. Specify Template Source
     - Choose "Upload a template file"
     - Click "Choose file" and select your CloudFormation template file
     - Click "Next"
 
-5.- Specify Stack Details
+5. Specify Stack Details
     - Enter a meaningful name for the stack in the "Stack name" field (e.g., "tagger-solution-frontend")
 
-6.- Configure General Configuration Parameters
+6. Configure General Configuration Parameters
     - GitHubRepositoryUrl: Enter the HTTPS URL for your GitHub repository where the Taggr Solution code is stored
     - AppUser: Enter the email address that will be used for the application user (e.g., admin@example.com )
 
 
-7.- Configure Network and Security Parameters
+7. Configure Network and Security Parameters
     - VPCId: Select the VPC ID where you want to deploy the App Runner service
     - SubnetId: Select the Subnet ID for the App Runner VPC Connector
     - IPv4CIDR: Enter the IPv4 CIDR range that should be allowed access through AWS Security Group (e.g., 192.168.1.0/24)
     - IPv6CIDR: Enter the IPv6 CIDR range that should be allowed access through AWS Security Group (e.g., 2605:59c8:731d:4810:415:bd81:f251:f260/128)
 
-8.- Configure Stack Options (Optional)
+8. Configure Stack Options (Optional)
     - Add any tags to help identify and manage your stack resources
     - Configure advanced options if needed (notifications, stack policy, rollback configuration, etc.)
     - Click "Next"
 
 
-9.- Review Stack Configuration
+9. Review Stack Configuration
     - Review all the parameters and settings for your stack
     - Scroll down and check the acknowledgment box that states "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
     - Click "Create stack"
 
 
-10.- Monitor Stack Creation
+10. Monitor Stack Creation
     - The CloudFormation console will display the stack creation status
     - View the "Events" tab to monitor the progress and troubleshoot any issues
     - Wait until the stack status changes to "CREATE_COMPLETE"
 
 
-11.- Access Stack Outputs
+11. Access Stack Outputs
     - Once the stack creation is complete, navigate to the "Outputs" tab
     - Here you'll find important information such as the URL to access the frontend application
     - Save or note down these output values for future reference
 
-12.- Verify Deployment
+12. Verify Deployment
     - Once the stack creation is complete, navigate to the "Outputs" tab
     - Here you'll find important information such as the URL to access the frontend application
     - Log in using the provided application user email (you may receive temporary credentials via email)
