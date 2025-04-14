@@ -13,6 +13,31 @@ Taggr Solution empowers organizations to optimize their AWS resources, improve c
 
 
 
+## Key features
+
+- Cross-account and cross-region automated tagging.
+
+- Custom tag filtering for precise resource management.
+
+- Comprehensive metadata search functionality.
+
+- Fully serverless architecture for scalability and cost-efficiency.
+
+
+
+## Use cases
+
+- ### Cost Allocation
+A large enterprise uses Taggr Solution to automatically tag resources across multiple departments, enabling accurate cost attribution and budgeting.
+
+- ### Security Compliance
+A financial services company leverages the application to ensure all resources are properly tagged for regulatory compliance, using custom filters to identify and rectify any non-compliant resources.
+
+- ### Resource Optimization
+A startup uses the metadata search feature to quickly locate underutilized resources across their AWS infrastructure, allowing them to optimize their cloud spend and improve efficiency.
+
+
+
 ## Architecture and Deployment Options
 
 ### Private Deployment Architecture
@@ -110,31 +135,6 @@ Key Components:
 <img width="1089" alt="image" src="img/img-02.png">
 <img width="1089" alt="image" src="img/img-04.png">
 <img width="1089" alt="image" src="img/img-08.png">
-
-
-## Key features
-
-- Cross-account and cross-region automated tagging.
-
-- Custom tag filtering for precise resource management.
-
-- Comprehensive metadata search functionality.
-
-- Fully serverless architecture for scalability and cost-efficiency.
-
-
-
-## Use cases
-
-- ### Cost Allocation
-A large enterprise uses Taggr Solution to automatically tag resources across multiple departments, enabling accurate cost attribution and budgeting.
-
-- ### Security Compliance
-A financial services company leverages the application to ensure all resources are properly tagged for regulatory compliance, using custom filters to identify and rectify any non-compliant resources.
-
-- ### Resource Optimization
-A startup uses the metadata search feature to quickly locate underutilized resources across their AWS infrastructure, allowing them to optimize their cloud spend and improve efficiency.
-
 
  
 
