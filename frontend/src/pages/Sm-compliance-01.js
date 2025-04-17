@@ -743,7 +743,7 @@ function Application() {
                           <Flashbar items={applicationMessage} />     
 
                           <Header variant="h1">
-                              Compliance tagging
+                              Tagging compliance
                           </Header>
                           <br/>
                           <ExpandableSection
@@ -756,7 +756,7 @@ function Application() {
                                     <td style={{"width":"33%", "padding-right": "2em", "text-align": "left", "vertical-align" : "top" }}>                                          
                                         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                                           <Icon name={"add-plus"} size="medium" />
-                                          <span style={{ marginLeft: '8px', fontSize: '16px', fontWeight: 'bold' }}>Creata a compliance validation</span>
+                                          <span style={{ marginLeft: '8px', fontSize: '16px', fontWeight: 'bold' }}>Create a compliance validation</span>
                                         </div>                                                                  
                                         <SpaceBetween size="s">
                                           <div>
