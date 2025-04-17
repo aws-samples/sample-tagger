@@ -42,7 +42,7 @@ export const SideMainLayoutMenu = [
         items: [
             { type: "link", text: "Dashboard", href: "/dashboard/" },
             { type: "link", text: "Compliance", href: "/compliance/" },
-            { type: "link", text: "Tag Editor", href: "/tagger/" }
+            { type: "link", text: "Tagging process", href: "/tagger/" }
         ],
       },
     { type: "divider" },
