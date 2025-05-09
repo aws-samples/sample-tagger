@@ -329,6 +329,7 @@ Resources:
               - "/*/POST/"
 
 
+
   IAMRoleLambdaGlobal:
       Type: "AWS::IAM::Role"
       Properties:
