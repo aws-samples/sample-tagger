@@ -125,6 +125,8 @@ class DataStore:
 
     def save_tags_errors(self, scan_id, tags, batch_size=1000):
       
+        print(tags)
+
         # Prepare INSERT statement
         insert_query = """
         INSERT INTO tbtag_errors (
@@ -160,7 +162,7 @@ class DataStore:
                         tag['region'], 
                         tag['service'], 
                         tag['identifier'], 
-                        tag['arn'], 
+                        tag.get('arn',''), 
                         tag['status'], 
                         tag['error']
                     ) for tag in batch

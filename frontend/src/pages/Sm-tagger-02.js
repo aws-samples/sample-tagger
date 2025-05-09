@@ -28,12 +28,14 @@ Textarea,
 TokenGroup,
 Icon,
 KeyValuePairs,
-Badge
+Badge,
+Link
 } from '@cloudscape-design/components';
 
 import CustomHeader from "../components/Header";
 import CodeEditor01  from '../components/CodeEditor01';
 import CustomTable01 from "../components/Table01";
+import CustomTable02 from "../components/Table02";
 import TokenGroupReadOnly01 from '../components/TokenGroupReadOnly01';
 
 
@@ -79,6 +81,13 @@ function Application() {
 
 const visibleContentResources = ['action', 'account', 'region', 'service', 'type', 'identifier', 'name', 'tags_number', 'metadata'];
 const [datasetResources,setDatasetResources] = useState([]);
+
+//-- Pagging    
+const pageId = useRef(0);
+var totalPages = useRef(1);
+var totalRecords = useRef(0);
+var pageSize = useRef(20);
+
 
 var txtRuleset = useRef("");
 
@@ -152,6 +161,11 @@ const [metadata,setMetadata] = useState("");
 // Wizard variables
 const [activeStepIndex,setActiveStepIndex] = useState(0);
 var currentStep = useRef(0);
+
+
+// Tag errors
+const [datasetTagErrors, setDatasetTagErrors] = useState([]);
+const [visibleTaggingErrors, setVisibleTaggingErrors] = useState(false);
 
 
 
@@ -284,24 +298,19 @@ async function getScanResults(){
                             processId : "01-get-metadata-results", 
                             scanId : currentScanId.current,
                             ruleset : txtRuleset.current,
-                            action : filterAction.current                        
+                            action : filterAction.current,
+                            page : pageId.current,
+                            limit : pageSize.current                     
             };        
             
-            console.log(parameters);
-
             const api = createApiObject({ method : 'POST', async : true });          
             api.onload = function() {                    
                       if (api.status === 200) {    
-                          var response = JSON.parse(api.responseText)?.['response'];                      
+                          var response = JSON.parse(api.responseText)?.['response']; 
+                          totalPages.current =   response['pages'];            
+                          totalRecords.current =   response['records'];                     
                           setDatasetResources(response['resources']);                          
-
-                          var searchSummary = response['resources'].reduce((counts, item) => {
-                            if (item.action === 1) counts.action++;                            
-                            return counts;
-                          }, { action: 0 });
-
-                          setSearchSummary(searchSummary);
-
+                          
                       }
             };
             api.send(JSON.stringify({ parameters : parameters }));            
@@ -313,6 +322,36 @@ async function getScanResults(){
       }
 };
 
+
+
+//--## Get tagging errors 
+async function getTaggingErrors(){
+  try {
+       
+        var parameters = {                         
+                        processId : "23-get-tagging-errors", 
+                        scanId : currentScanId.current,                       
+        };        
+        
+
+        const api = createApiObject({ method : 'POST', async : true });          
+        api.onload = function() {                    
+                  if (api.status === 200) {    
+                      var response = JSON.parse(api.responseText)?.['response'];                                  
+                      setDatasetTagErrors(response['resources']);  
+                      setVisibleTaggingErrors(true);                        
+
+
+                  }
+        };
+        api.send(JSON.stringify({ parameters : parameters }));            
+        
+  }
+  catch(err){
+        console.log(err);
+        console.log('Timeout API error - PID: 23-get-tagging-errors');                  
+  }
+};
 
 
 //--## Update resource action
@@ -345,7 +384,76 @@ async function updateResourceAction(){
 
 
 
+//--## Get tagging status
+const getTaggingProcessStatus = useCallback(async () => {      
+  
+  try {
+      
+      var parameters = {                         
+                      processId : "06-get-tagging-process-status", 
+                      scanId : currentScanId.current
+      };        
+      
+      const api = createApiObject({ method : 'POST', async : true });          
+      api.onload = function() {                    
+                if (api.status === 200) {    
+                    var response = JSON.parse(api.responseText)?.['response']; 
+                    var message = JSON.parse(response['message']);                     
+                    if (response['status'] === 'completed') {
+                        setTaggingStatus('completed');   
+                        if (( message['error'] || 0) == 0 ){
+                          showMessage({ type : "success", content : `Tagging process ${currentScanId.current} has been completed. Success (${message['success'] || 0 }), Errors (${message['error'] || 0 }).` });                        
+                        }
+                        else{
+                          showMessage({ 
+                                        type : "error", 
+                                        content : (
+                                          <>
+                                              Tagging process {currentScanId.current} has been completed. Success ({message['success'] || 0 }), Errors ({message['error'] || 0 }). 
+                                              <Link 
+                                                    color="inverted" 
+                                                    onFollow={() => {
+                                                            getTaggingErrors();
+                                                    }}               
 
+                                                >
+                                                View errors.
+                                              </Link>
+                                          </>
+                                        )
+                          });                        
+                          /*
+                          setApplicationMessage([
+                                {
+                                  type: object.type,
+                                  content: object.content,
+                                  dismissible: true,
+                                  dismissLabel: "Dismiss message",
+                                  onDismiss: () => setApplicationMessage([]),
+                                  id: "message_1"
+                                }
+                          ]);*/
+                          
+                        }
+                        
+                    } else if (response['status'] === 'failed') {
+                        setTaggingStatus('failed');
+                    } else {                      
+                      timeoutRef.current = setTimeout(getTaggingProcessStatus, 5000); 
+                    }                                           
+                    
+                }
+      };
+      api.send(JSON.stringify({ parameters : parameters })); 
+
+  } catch (err) {
+    console.log('Timeout API error - PID: 03-get-metadata-search-status');  
+    console.error(err);
+  }
+}, []);
+
+
+/*
 //--## Get tagging status
 const getTaggingProcessStatus = useCallback(async () => {      
   
@@ -381,7 +489,7 @@ const getTaggingProcessStatus = useCallback(async () => {
 }, []);
 
 
-
+*/
 
 
 //--## Start tagging process
@@ -480,6 +588,7 @@ function handleGotoDashboard(){
                             currentStep.current = detail.requestedStepIndex;
                             if (detail.requestedStepIndex == 1)
                             {
+                               pageId.current = 0;
                                getScanResults();
                             }
                             setApplicationMessage([]);
@@ -529,7 +638,7 @@ function handleGotoDashboard(){
                               content: (
                                 <div>                                                                       
                                     <Container>
-                                        <CustomTable01
+                                        <CustomTable02
                                             columnsTable={columnsTableResources}
                                             visibleContent={visibleContentResources}
                                             dataset={datasetResources}
@@ -553,6 +662,7 @@ function handleGotoDashboard(){
                                                           size="xs"
                                                         >
                                                           <Button iconName="refresh" onClick={() => { 
+                                                                  pageId.current = 0;
                                                                   getScanResults();
                                                           }}></Button>
                                                           <Select
@@ -560,6 +670,7 @@ function handleGotoDashboard(){
                                                               onChange={({ detail }) => {
                                                                   setSelectedFilterAction(detail.selectedOption);
                                                                   filterAction.current = detail.selectedOption['value'] ;
+                                                                  pageId.current = 0;
                                                                   getScanResults();
                                                                 }
                                                               }
@@ -586,6 +697,16 @@ function handleGotoDashboard(){
 
                                                           
                                                         </SpaceBetween>
+                                            }
+
+                                            pageSize={pageSize.current}
+                                            totalPages={totalPages.current}
+                                            totalRecords={totalRecords.current}
+                                            pageId={pageId.current + 1}
+                                            onPaginationChange={( item ) => {                                                                                                                                        
+                                                pageId.current = item - 1;       
+                                                getScanResults();                                        
+                                              }
                                             }
                                                                     
                                           />
@@ -619,7 +740,7 @@ function handleGotoDashboard(){
                                                     },                                                                                                       
                                                     {
                                                       label: "Resources",
-                                                      value: searchSummary['action'],                                                      
+                                                      value: totalRecords.current,                                                      
                                                     },                                                    
                                                     {
                                                       label: "Tags",
@@ -669,7 +790,7 @@ function handleGotoDashboard(){
                                                               <SpaceBetween direction="horizontal" size="xs">
                                                                 <Button variant="primary" 
                                                                   onClick={handleStartTaggingProcess}                                                                   
-                                                                  disabled={ ( ( taggingStatus=="in-progress" || checkedKnowledge == false || searchSummary['action'] == 0 )  ? true : false )}
+                                                                  disabled={ ( ( taggingStatus=="in-progress" || checkedKnowledge == false ||  ( filterAction.current == "2" && totalRecords.current > 0) )  ? true : false )}
                                                                   loading={(taggingStatus=="in-progress" ? true : false )}
                                                                   style={{ "width": "600px"}}
                                                                 >
@@ -758,6 +879,33 @@ function handleGotoDashboard(){
                 readOnly={true}
               />
           </Modal>
+
+          <Modal
+            onDismiss={() => setVisibleTaggingErrors(false)}
+            visible={visibleTaggingErrors}
+            footer={
+              <Box float="right">
+                <SpaceBetween direction="horizontal" size="xs">
+                    <Button variant="primary"  
+                              onClick={() => { 
+                                setVisibleTaggingErrors(false);
+                                    }}
+                      >
+                          Close
+                      </Button>                     
+                </SpaceBetween>
+              </Box>
+            }
+            header="Tagging errors"
+            size="max"
+          >
+              <CodeEditor01
+                format={"json"}
+                value={JSON.stringify(datasetTagErrors,null,4)}
+                readOnly={true}
+              />
+          </Modal>
+
         
         
     </div>

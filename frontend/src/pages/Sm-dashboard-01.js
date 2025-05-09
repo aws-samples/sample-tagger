@@ -22,6 +22,7 @@ import '@aws-amplify/ui-react/styles.css';
 
 import CustomHeader from "../components/Header";
 import CustomTable01 from "../components/Table01";
+import CustomTable02 from "../components/Table02";
 import NativeChartBar01 from '../components/NativeChartBar-01';
 import CodeEditor01  from '../components/CodeEditor01';
 
@@ -99,12 +100,20 @@ function Application() {
     ];
 
     const visibleContentResources = ['action', 'account', 'region', 'service', 'type', 'identifier', 'name', 'tags_number', 'metadata'];
-    const [datasetResources,setDatasetResources] = useState([]);
-      
+    const [datasetResources,setDatasetResources] = useState([]);      
+
+    //-- Pagging    
+    const pageId = useRef(0);
+    var totalPages = useRef(1);
+    var totalRecords = useRef(0);
+    var pageSize = useRef(20);
+    
+    
 
     //-- Filter Action
     const [selectedFilterAction, setSelectedFilterAction] = useState({ label : 'Filter-In', value : "1" });
     const filterAction = useRef("1");
+
 
     var currentScanId = useRef({ parameters : {} });
 
@@ -172,14 +181,18 @@ function Application() {
             var parameters = {                         
                       processId : "01-get-metadata-results", 
                       scanId : currentScanId.current['scan_id'],                      
-                      action : filterAction.current                        
+                      action : filterAction.current,
+                      page : pageId.current,
+                      limit : pageSize.current              
             };             
             
 
             const api = createApiObject({ method : 'POST', async : true });          
             api.onload = function() {                    
                       if (api.status === 200) {    
-                          var response = JSON.parse(api.responseText)?.['response'];                      
+                          var response = JSON.parse(api.responseText)?.['response'];                             
+                          totalPages.current =   response['pages'];            
+                          totalRecords.current =   response['records'];            
                           setDatasetResources(response['resources'])                            
                       }
             };
@@ -332,15 +345,23 @@ function Application() {
                                 content: 
                                         <div>
                                             <Container>
-                                              <CustomTable01
+                                              <CustomTable02
                                                   columnsTable={columnsTableResources}
                                                   visibleContent={visibleContentResources}
                                                   dataset={datasetResources}
                                                   title={"Resource search results"}
-                                                  description={""}
-                                                  pageSize={10}
+                                                  description={""}                                                  
                                                   onSelectionItem={( item ) => {                                                                                    
                                                       //resourceId.current = item[0];                                                
+                                                    }
+                                                  }
+                                                  pageSize={pageSize.current}
+                                                  totalPages={totalPages.current}
+                                                  totalRecords={totalRecords.current}
+                                                  pageId={pageId.current + 1}
+                                                  onPaginationChange={( item ) => {                                                                                                                                        
+                                                      pageId.current = item - 1;       
+                                                      getDatasetResources();                                        
                                                     }
                                                   }
                                                   extendedTableProperties = {
@@ -359,6 +380,7 @@ function Application() {
                                                                     onChange={({ detail }) => {
                                                                         setSelectedFilterAction(detail.selectedOption);
                                                                         filterAction.current = detail.selectedOption['value'] ;
+                                                                        pageId.current = 0;
                                                                         getDatasetResources();
                                                                       }
                                                                     }
@@ -472,6 +494,7 @@ function Application() {
                               onSelectionItem={( item ) => {
                                   currentScanId.current = item[0];                                                                    
                                   setsplitPanelShow(true);
+                                  pageId.current = 0;
                                   getDatasetResources();
                                 }
                               }
