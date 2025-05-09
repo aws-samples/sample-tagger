@@ -189,7 +189,8 @@ Resources:
                               "dsql:DbConnectAdmin",
                               "dsql:CreateCluster",
                               "dsql:TagResource",
-                              "dsql:GetCluster"
+                              "dsql:GetCluster",
+                              "dsql:GetVpcEndpointServiceName"
                           ],
                           "Resource": "*"
                       },
