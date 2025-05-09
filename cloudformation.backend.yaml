@@ -378,9 +378,10 @@ Resources:
                             "Action": [
                                 "dsql:DbConnectAdmin"
                             ],
-                            "Resource": [
-                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLCluster}"
-                            ]
+                            Resource:
+                              - !Sub 
+                                - "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterIdentifier}"
+                                - ClusterIdentifier: !GetAtt DSQLCluster.Identifier
                         },
                         {
                             "Effect": "Allow",
@@ -423,7 +424,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                                        
-              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
+              DBHOST: !Ref DSQLCluster
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -458,7 +459,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
+              DBHOST: !Ref DSQLCluster
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -492,7 +493,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
+              DBHOST: !Ref DSQLCluster
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -526,7 +527,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
+              DBHOST: !Ref DSQLCluster
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
