@@ -12,15 +12,26 @@ Parameters:
       Type: String
       Description: S3 Artifacts
   
-  DSQLCluster:
-      Type: String
-      Description: DSQLCluster
+  
 
-  DSQLClusterId:
-      Type: String
-      Description: DSQLClusterId
-  
-  
+Resources:
+
+
+######################################################################
+########
+########   -----------------          DSQL Cluster   -----------------
+########
+######################################################################
+
+
+
+  DSQLCluster:
+    Type: AWS::DSQL::Cluster
+    Properties:
+      DeletionProtectionEnabled: false
+      Tags: 
+        - Key: Name
+          Value: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
 
 
 ######################################################################
@@ -29,7 +40,8 @@ Parameters:
 ########
 ######################################################################
 
-Resources:
+
+
   IAMRoleCognito:
       Type: "AWS::IAM::Role"
       Properties:
@@ -367,7 +379,7 @@ Resources:
                                 "dsql:DbConnectAdmin"
                             ],
                             "Resource": [
-                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
+                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLCluster}"
                             ]
                         },
                         {
@@ -410,8 +422,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:        
       Environment: 
-          Variables:                          
-              DBHOST: !Ref DSQLCluster
+          Variables:                                        
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -446,7 +458,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -480,7 +492,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
@@ -514,7 +526,7 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"

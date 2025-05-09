@@ -2,6 +2,7 @@ import {useState,useEffect,useRef, useCallback} from 'react'
 import { configuration, SideMainLayoutHeader,SideMainLayoutMenu, breadCrumbs } from './Configs';
 import CustomHeader from "../components/Header";
 import CustomTable01 from "../components/Table01";
+import CustomTable02 from "../components/Table02";
 import NativeChartPie01 from "../components/NativeChartPie-01";
 import CustomMetric01 from "../components/Metric01";
 import CodeEditor01  from '../components/CodeEditor01';
@@ -120,6 +121,12 @@ function Application() {
   const [datasetResources,setDatasetResources] = useState([]);
 
 
+  //-- Pagging    
+  const pageId = useRef(0);
+  var totalPages = useRef(1);
+  var totalRecords = useRef(0);
+  var pageSize = useRef(20);
+      
 
   //--## Create Metadatabase Options
   const [selectedAccounts,setSelectedAccounts] = useState([]);
@@ -201,15 +208,18 @@ function Application() {
             var parameters = {                         
                       processId : "01-get-metadata-results", 
                       scanId : currentScanId.current['scan_id'],                      
-                      action : filterAction.current                        
+                      action : filterAction.current,
+                      page : pageId.current,
+                      limit : pageSize.current                   
             };             
             
 
             const api = createApiObject({ method : 'POST', async : true });          
             api.onload = function() {                    
                       if (api.status === 200) {    
-                          var response = JSON.parse(api.responseText)?.['response'];                      
-                          console.log(response);
+                          var response = JSON.parse(api.responseText)?.['response'];                                                
+                          totalPages.current =   response['pages'];            
+                          totalRecords.current =   response['records'];  
                           setDatasetResources(response['resources'])                            
                       }
             };
@@ -671,7 +681,7 @@ function Application() {
                                         <div>  
 
                                             <Container>
-                                                <CustomTable01
+                                                <CustomTable02
                                                       columnsTable={columnsTableResources}
                                                       visibleContent={visibleContentResources}
                                                       dataset={datasetResources}
@@ -698,6 +708,7 @@ function Application() {
                                                                         onChange={({ detail }) => {
                                                                             setSelectedFilterAction(detail.selectedOption);
                                                                             filterAction.current = detail.selectedOption['value'] ;
+                                                                            pageId.current = 0;
                                                                             getDatasetResources();
                                                                           }
                                                                         }
@@ -714,6 +725,16 @@ function Application() {
                                                                     </Button>
                                                                   
                                                                   </SpaceBetween>
+                                                      }
+                                            
+                                                      pageSize={pageSize.current}
+                                                      totalPages={totalPages.current}
+                                                      totalRecords={totalRecords.current}
+                                                      pageId={pageId.current + 1}
+                                                      onPaginationChange={( item ) => {                                                                                                                                        
+                                                          pageId.current = item - 1;       
+                                                          getDatasetResources();                                        
+                                                        }
                                                       }
                                                                               
                                                     />
@@ -802,6 +823,7 @@ function Application() {
                               pageSize={10}
                               onSelectionItem={( item ) => {
                                   currentScanId.current = item[0];  
+                                  pageId.current = 0;
                                   setIsSelectMetadataBase(true);       
                                   setsplitPanelShow(true);                          
                                   getDatasetResources();

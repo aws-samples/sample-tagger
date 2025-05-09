@@ -33,6 +33,7 @@ Link
 import CustomHeader from "../components/Header";
 import CodeEditor01  from '../components/CodeEditor01';
 import CustomTable01 from "../components/Table01";
+import CustomTable02 from "../components/Table02";
 import TokenGroupReadOnly01 from '../components/TokenGroupReadOnly01';
 import WhereClauseViewer01 from '../components/WhereClauseViewer01';
 
@@ -79,12 +80,22 @@ function Application() {
 const visibleContentResources = ['action', 'account', 'region', 'service', 'type', 'identifier', 'name', 'tags_number', 'metadata'];
 const [datasetResources,setDatasetResources] = useState([]);
 
+
 var txtRuleset = useRef("");
 
 const [selectedRuleSet,setSelectedRuleSet] = useState({});
 const [datasetRuleSet,setDatasetRuleSet] = useState([]);       
 
 var currentScanId = useRef("");
+
+
+//-- Pagging    
+const pageId = useRef(0);
+var totalPages = useRef(1);
+var totalRecords = useRef(0);
+var pageSize = useRef(20);
+
+
 
 //--## Tasks
 const timeoutRef = useRef(null);
@@ -340,22 +351,20 @@ async function getScanResults(){
                             processId : "01-get-metadata-results", 
                             scanId : currentScanId.current,
                             ruleset : JSON.parse(txtRuleset.current),
-                            action : filterAction.current                        
+                            action : filterAction.current,                            
+                            page : pageId.current,
+                            limit : pageSize.current                           
             };        
             
 
             const api = createApiObject({ method : 'POST', async : true });          
             api.onload = function() {                    
                       if (api.status === 200) {    
-                          var response = JSON.parse(api.responseText)?.['response'];                      
-                          setDatasetResources(response['resources']);                          
+                          var response = JSON.parse(api.responseText)?.['response'];                                               
+                          totalPages.current =   response['pages'];            
+                          totalRecords.current =   response['records'];   
+                          setDatasetResources(response['resources']);                         
 
-                          var searchSummary = response['resources'].reduce((counts, item) => {
-                            if (item.action === 1) counts.action++;                            
-                            return counts;
-                          }, { action: 0 });
-
-                          setSearchSummary(searchSummary);
 
                       }
             };
@@ -447,6 +456,7 @@ const getMetadataSearchStatus = useCallback(async () => {
                         if (response['status'] === 'completed') {
                             setSearchStatus('completed');         
                             showMessage({ type : "success", content : `Search process ${currentScanId.current} has been completed. Resources found (${response['resources']}).` });                                         
+                            pageId.current = 0;
                             getScanResults();
                         } else if (response['status'] === 'failed') {
                             setSearchStatus('failed');
@@ -851,7 +861,7 @@ const convertTagsToTokens = (tags) => {
                                     <Flashbar items={applicationMessage} />
                                     <br/>                                             
                                     <Container>
-                                        <CustomTable01
+                                        <CustomTable02
                                             columnsTable={columnsTableResources}
                                             visibleContent={visibleContentResources}
                                             dataset={datasetResources}
@@ -875,6 +885,7 @@ const convertTagsToTokens = (tags) => {
                                                           size="xs"
                                                         >
                                                           <Button iconName="refresh" onClick={() => { 
+                                                                  pageId.current = 0;
                                                                   getScanResults();
                                                           }}></Button>
                                                           <Select
@@ -882,6 +893,7 @@ const convertTagsToTokens = (tags) => {
                                                               onChange={({ detail }) => {
                                                                   setSelectedFilterAction(detail.selectedOption);
                                                                   filterAction.current = detail.selectedOption['value'] ;
+                                                                  pageId.current = 0;
                                                                   getScanResults();
                                                                 }
                                                               }
@@ -908,6 +920,16 @@ const convertTagsToTokens = (tags) => {
 
                                                           
                                                         </SpaceBetween>
+                                            }
+
+                                            pageSize={pageSize.current}
+                                            totalPages={totalPages.current}
+                                            totalRecords={totalRecords.current}
+                                            pageId={pageId.current + 1}
+                                            onPaginationChange={( item ) => {                                                                                                                                        
+                                                pageId.current = item - 1;       
+                                                getScanResults();                                        
+                                              }
                                             }
                                                                     
                                           />
@@ -941,7 +963,7 @@ const convertTagsToTokens = (tags) => {
                                                     },                                                                                                       
                                                     {
                                                       label: "Resources",
-                                                      value: searchSummary['action'],                                                      
+                                                      value: totalRecords.current,                                                      
                                                     },                                                    
                                                     {
                                                       label: "Tags",
@@ -991,7 +1013,7 @@ const convertTagsToTokens = (tags) => {
                                                               <SpaceBetween direction="horizontal" size="xs">
                                                                 <Button variant="primary" 
                                                                   onClick={handleStartTaggingProcess}                                                                   
-                                                                  disabled={ ( ( taggingStatus=="in-progress" || checkedKnowledge == false || searchSummary['action'] == 0 )  ? true : false )}
+                                                                  disabled={ ( ( taggingStatus=="in-progress" || checkedKnowledge == false || ( filterAction.current == "2" && totalRecords.current > 0)  )  ? true : false )}
                                                                   loading={(taggingStatus=="in-progress" ? true : false )}
                                                                   style={{ "width": "600px"}}
                                                                 >
