@@ -379,9 +379,14 @@ Resources:
                                 "dsql:DbConnectAdmin"
                             ],
                             Resource:
-                              - !Sub 
-                                - "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterIdentifier}"
-                                - ClusterIdentifier: !GetAtt DSQLCluster.Identifier
+                              - !Join 
+                                - ""
+                                - - "arn:aws:dsql:"
+                                  - !Ref "AWS::Region"
+                                  - ":"
+                                  - !Ref "AWS::AccountId"
+                                  - ":cluster/"
+                                  - !GetAtt DSQLCluster.Identifier
                         },
                         {
                             "Effect": "Allow",
