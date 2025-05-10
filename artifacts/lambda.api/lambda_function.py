@@ -391,7 +391,7 @@ def fn_01_get_metadata_results(event: dict) -> APIGatewayResponse:
                 'region' : row[3],
                 'service' : row[4],
                 'type' : row[5],
-                'identifier' : row[6] + ":" + str(row[1]),
+                'identifier' : row[6],
                 'name' : row[7],
                 'creation' : row[8],
                 'tags_list' : row[9],
