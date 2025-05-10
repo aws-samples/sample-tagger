@@ -119,6 +119,7 @@ Resources:
                         "memorydb:UnTagResource",
                         "timestream:TagResource",
                         "timestream:UnTagResource",
+                        "timestream:ListTagsForResource",
                         "workspaces:DeleteTags"
                       ],
                       "Resource": "*"
