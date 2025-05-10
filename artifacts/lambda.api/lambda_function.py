@@ -321,66 +321,6 @@ def create_error_response(status_code: int, message: str, code: str) -> APIGatew
 ###-- Get metadata results used by normal tagger process
 ###
 
-def fn_01_get_metadata_results___TEMP(event: dict) -> APIGatewayResponse:
-    try:
-        resources = []
-        select_query = """
-        SELECT
-            scan_id,            
-            seq,
-            account_id, 
-            region, 
-            service,
-            resource_type, 
-            resource_id, 
-            name,
-            creation_date,
-            tags,  
-            tags_number,          
-            action
-        FROM
-            tbresources
-        WHERE
-            scan_id = %s
-            AND
-            ( action = %s OR %s = 3)
-        ORDER BY
-            action ASC
-        """
-    
-        parameters = (event['scanId'],int(event['action']), int(event['action']))
-
-        ds = DataStore(db_config=DB_CONFIG, region=REGION)
-        rows = ds.execute_select(select_query,parameters)
-        for row in rows:
-            resources.append({
-                'scan_id' : row[0],
-                'seq' : row[1],
-                'account' : row[2],
-                'region' : row[3],
-                'service' : row[4],
-                'type' : row[5],
-                'identifier' : row[6],
-                'name' : row[7],
-                'creation' : row[8],
-                'tags_list' : row[9],
-                'tags_number' : row[10],                
-                'action' : row[11]
-            })
-
-        return create_response(200, { 
-                                        "response" :  { "resources" : resources}
-                                    }
-        )
-
-    except Exception as e:
-        logger.error(f"Error in fn_01_get_metadata_results: {str(e)}")
-        return create_error_response(
-            500,
-            "Internal server error",
-            ERROR_CODES["INTERNAL_ERROR"]
-        )
-
 
 def fn_01_get_metadata_results(event: dict) -> APIGatewayResponse:
     try:

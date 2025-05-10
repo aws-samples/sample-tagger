@@ -422,8 +422,7 @@ Resources:
                     DSQLClusterIdentifier: !GetAtt DSQLCluster.Identifier
                   }    
             
-riabtyqniwh4fnsmn7pepxgq6e.dsql.us-east-1.on.aws
-  
+ 
   LambdaFunctionApi:
     Type: AWS::Lambda::Function
     Properties:        
