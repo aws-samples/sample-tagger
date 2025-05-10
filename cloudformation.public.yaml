@@ -190,7 +190,8 @@ Resources:
                               "dsql:CreateCluster",
                               "dsql:TagResource",
                               "dsql:GetCluster",
-                              "dsql:GetVpcEndpointServiceName"
+                              "dsql:GetVpcEndpointServiceName",
+                              "dsql:ListTagsForResource"
                           ],
                           "Resource": "*"
                       },
