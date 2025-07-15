@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template to build frontend for Tagger Solution'
+Description: 'Tagger Solution - (uksb-kzxy2tzxlf)'
 
 Metadata: 
   AWS::CloudFormation::Interface: 

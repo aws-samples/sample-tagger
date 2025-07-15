@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "MAP Tagger Solution - Cross Account Role"
+Description: "MAP Tagger Solution - Cross Account Role - (uksb-kzxy2tzxlf)"
 Parameters:
   RoleARN:
       Type: String
