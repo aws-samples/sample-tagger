@@ -582,10 +582,10 @@ Resources:
 ######################################################################
 
 
-  IAMPolicyTaggerSolution:
+  IAMPolicyTaggerSolutionS1:
       Type: AWS::IAM::ManagedPolicy
       Properties:
-          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s1", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
           PolicyDocument: !Sub |
               {
                 "Version": "2012-10-17",
@@ -697,7 +697,25 @@ Resources:
                         "timestream:TagResource",
                         "timestream:UnTagResource",
                         "timestream:ListTagsForResource",
-                        "workspaces:DeleteTags",
+                        "workspaces:DeleteTags"
+                    ],
+                    "Resource": "*"
+                  }
+                ]
+              }
+
+
+  IAMPolicyTaggerSolutionS2:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s2", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [                        
                         "athena:ListDataCatalogs",
                         "athena:ListCapacityReservations",
                         "athena:ListTagsForResource",
@@ -873,7 +891,7 @@ Resources:
                   }
                 ]
               }
-              
+
   IAMChildRoleTaggerSolution:
       Type: "AWS::IAM::Role"
       DependsOn: IAMRoleLambdaGlobal
@@ -895,7 +913,8 @@ Resources:
               }
           MaxSessionDuration: 3600
           ManagedPolicyArns:
-              - !Ref IAMPolicyTaggerSolution
+              - !Ref IAMPolicyTaggerSolutionS1
+              - !Ref IAMPolicyTaggerSolutionS2
     
         
 

@@ -5,10 +5,10 @@ Parameters:
       Type: String
       Description: IAM ARN Role for Central Account
 Resources:
-    IAMPolicyMapTaggerSolution:
+    IAMPolicyMapTaggerSolutionS1:
         Type: AWS::IAM::ManagedPolicy
         Properties:
-            ManagedPolicyName: !Join [ "-", ["policy-map-tagger-solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+            ManagedPolicyName: !Join [ "-", ["policy-map-tagger-solution-s1", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
             PolicyDocument: !Sub |
                 {
                   "Version": "2012-10-17",
@@ -120,7 +120,24 @@ Resources:
                         "timestream:TagResource",
                         "timestream:UnTagResource",
                         "timestream:ListTagsForResource",
-                        "workspaces:DeleteTags",
+                        "workspaces:DeleteTags"
+                      ],
+                      "Resource": "*"
+                    }
+                  ]
+                }
+
+    IAMPolicyMapTaggerSolutionS2:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            ManagedPolicyName: !Join [ "-", ["policy-map-tagger-solution-s2", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+            PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [                                                
                         "athena:ListDataCatalogs",
                         "athena:ListCapacityReservations",
                         "athena:ListTagsForResource",
@@ -296,7 +313,7 @@ Resources:
                     }
                   ]
                 }
-                
+
     IAMRole:
         Type: "AWS::IAM::Role"
         Properties:
@@ -317,6 +334,7 @@ Resources:
                 }
             MaxSessionDuration: 3600
             ManagedPolicyArns:
-                - !Ref IAMPolicyMapTaggerSolution
+                - !Ref IAMPolicyMapTaggerSolutionS1
+                - !Ref IAMPolicyMapTaggerSolutionS2
     
     
