@@ -1,10 +1,14 @@
-// Helper function to parse WHERE clause string into conditions
+
+
 export const parseWhereClause = (whereClauseStr) => {
   if (!whereClauseStr || whereClauseStr.trim() === '') return [];
   
   const input = whereClauseStr.trim();
   const result = [];
   let currentIndex = 0;
+  
+  // Initial connector is empty for the first condition
+  let previousConnector = '';
   
   // Find all conditions by parsing the entire string
   while (currentIndex < input.length) {
@@ -15,7 +19,8 @@ export const parseWhereClause = (whereClauseStr) => {
     const metadataInIndex = input.indexOf("IN metadata", currentIndex);
     
     // Look for tags condition
-    const tagsIndex = input.indexOf("IN tags", currentIndex);
+    const tagsIndex = input.indexOf("POSITION(", currentIndex);
+    const tagsInIndex = input.indexOf("IN tags", currentIndex);
     
     // Look for creation_date condition
     const dateIndex = input.indexOf("creation_date", currentIndex);
@@ -24,20 +29,30 @@ export const parseWhereClause = (whereClauseStr) => {
     let nextConditionIndex = -1;
     let conditionType = '';
     
+    // Check for metadata condition
     if (metadataIndex !== -1 && metadataInIndex !== -1 && 
-        metadataIndex < metadataInIndex &&
-        (nextConditionIndex === -1 || metadataIndex < nextConditionIndex)) {
-      nextConditionIndex = metadataIndex;
-      conditionType = 'metadata';
+        metadataIndex < metadataInIndex && input.substring(metadataIndex, metadataInIndex).includes("'")) {
+      const potentialEnd = input.indexOf(")", metadataIndex);
+      if (potentialEnd !== -1 && 
+          input.substring(metadataIndex, potentialEnd).includes("IN metadata")) {
+        nextConditionIndex = metadataIndex;
+        conditionType = 'metadata';
+      }
     }
     
-    if (tagsIndex !== -1 && 
-        tagsIndex > currentIndex &&
-        (nextConditionIndex === -1 || input.indexOf("POSITION(", currentIndex) < nextConditionIndex)) {
-      nextConditionIndex = input.indexOf("POSITION(", currentIndex);
-      conditionType = 'tags';
+    // Check for tags condition
+    if (tagsIndex !== -1 && tagsInIndex !== -1 && 
+        tagsIndex < tagsInIndex && input.substring(tagsIndex, tagsInIndex).includes("'")) {
+      const potentialEnd = input.indexOf(")", tagsIndex);
+      if (potentialEnd !== -1 && 
+          input.substring(tagsIndex, potentialEnd).includes("IN tags") &&
+          (nextConditionIndex === -1 || tagsIndex < nextConditionIndex)) {
+        nextConditionIndex = tagsIndex;
+        conditionType = 'tags';
+      }
     }
     
+    // Check for creation_date condition
     if (dateIndex !== -1 &&
         (nextConditionIndex === -1 || dateIndex < nextConditionIndex)) {
       nextConditionIndex = dateIndex;
@@ -58,8 +73,12 @@ export const parseWhereClause = (whereClauseStr) => {
     
     if (nextAnd !== -1 && (nextOr === -1 || nextAnd < nextOr)) {
       endIndex = nextAnd;
+      previousConnector = 'AND';
     } else if (nextOr !== -1) {
       endIndex = nextOr;
+      previousConnector = 'OR';
+    } else {
+      previousConnector = 'AND'; // Default connector for the last condition
     }
     
     // Get the condition text
@@ -76,18 +95,11 @@ export const parseWhereClause = (whereClauseStr) => {
         const isExists = conditionText.includes("> 0");
         const operation = isExists ? 'EXISTS' : 'NOT EXISTS';
         
-        // Determine connector
-        let connector = 'AND';
-        if (result.length > 0) {
-          // Look backward for connector
-          const beforeText = input.substring(0, nextConditionIndex).trim();
-          if (beforeText.endsWith("OR")) {
-            connector = 'OR';
-          }
-        }
+        // Determine connector based on previous condition
+        let connector = result.length > 0 ? previousConnector : '';
         
         result.push({
-          id: `parsed-${Date.now()}-${result.length}`,
+          id: `parsed-\${Date.now()}-\${result.length}`,
           connector: connector,
           field: 'metadata',
           operation: operation,
@@ -104,18 +116,11 @@ export const parseWhereClause = (whereClauseStr) => {
         const isExists = conditionText.includes("> 0");
         const operation = isExists ? 'EXISTS' : 'NOT EXISTS';
         
-        // Determine connector
-        let connector = 'AND';
-        if (result.length > 0) {
-          // Look backward for connector
-          const beforeText = input.substring(0, nextConditionIndex).trim();
-          if (beforeText.endsWith("OR")) {
-            connector = 'OR';
-          }
-        }
+        // Determine connector based on previous condition
+        let connector = result.length > 0 ? previousConnector : '';
         
         result.push({
-          id: `parsed-${Date.now()}-${result.length}`,
+          id: `parsed-\${Date.now()}-\${result.length}`,
           connector: connector,
           field: 'tags',
           operation: operation,
@@ -125,7 +130,11 @@ export const parseWhereClause = (whereClauseStr) => {
     } else if (conditionType === 'creation_date') {
       // Extract operation
       let operation = '';
-      if (conditionText.includes(">")) {
+      if (conditionText.includes(">=")) {
+        operation = '>=';
+      } else if (conditionText.includes("<=")) {
+        operation = '<=';
+      } else if (conditionText.includes(">")) {
         operation = '>';
       } else if (conditionText.includes("<")) {
         operation = '<';
@@ -140,15 +149,8 @@ export const parseWhereClause = (whereClauseStr) => {
       if (startQuote !== -1 && endQuote !== -1 && operation) {
         const dateValue = conditionText.substring(startQuote + 1, endQuote);
         
-        // Determine connector
-        let connector = 'AND';
-        if (result.length > 0) {
-          // Look backward for connector
-          const beforeText = input.substring(0, nextConditionIndex).trim();
-          if (beforeText.endsWith("OR")) {
-            connector = 'OR';
-          }
-        }
+        // Determine connector based on previous condition
+        let connector = result.length > 0 ? previousConnector : '';
         
         result.push({
           id: `parsed-${Date.now()}-${result.length}`,
@@ -161,11 +163,13 @@ export const parseWhereClause = (whereClauseStr) => {
     }
     
     // Move to the next part of the string
-    currentIndex = endIndex > nextConditionIndex ? endIndex : nextConditionIndex + 1;
+    currentIndex = endIndex + 1;
   }
   
   return result;
 };
+
+
 
 // Helper function to generate WHERE clause from conditions
 export const generateWhereClause = (conditions) => {
@@ -233,6 +237,7 @@ export const generateTokens = (conditions, fieldOptions, updateCondition, remove
   const tokens = [];
   const validConditions = conditions.filter(c => c.value && c.value.trim() !== '');
   
+  
   validConditions.forEach((condition, index) => {
     // Add connector token except for the first condition
     if (index > 0) {
@@ -259,6 +264,8 @@ export const generateTokens = (conditions, fieldOptions, updateCondition, remove
       const fieldLabel = fieldOptions.find(option => option.value === condition.field)?.label || condition.field;
       tokenLabel = `${fieldLabel} ${operationSymbol} '${condition.value}'`;
     } else if (condition.field === 'metadata' || condition.field === 'tags') {
+
+      
       // Format metadata/tags condition
       const operationLabel = condition.operation === 'EXISTS' ? 'CONTAINS' : 'NOT CONTAINS';
       const fieldLabel = fieldOptions.find(option => option.value === condition.field)?.label || condition.field;

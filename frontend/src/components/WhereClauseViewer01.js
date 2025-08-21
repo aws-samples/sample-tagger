@@ -13,6 +13,9 @@ const WhereClauseViewer = React.memo(({ value = '' }) => {
     return parseWhereClause(value);
   }, [value]);
   
+  //console.log('WhereClauseViewer: conditions', conditions);
+
+
   // Generate tokens from the parsed conditions
   const tokens = useMemo(() => {
     return generateTokens(conditions, fieldOptions);
