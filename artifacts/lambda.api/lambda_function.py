@@ -12,6 +12,10 @@ import sys
 import concurrent.futures
 import math
 
+import urllib.request
+import zipfile
+import shutil
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -1716,6 +1720,91 @@ def fn_24_get_profile_catalog(event: dict) -> APIGatewayResponse:
 
 
 
+
+###
+###-- Sync modules from Github repository
+###
+
+def fn_25_sync_modules_from_repo(event: dict) -> APIGatewayResponse:
+    try:
+        
+
+        region = os.environ['REGION']
+        bucket_name = os.environ['S3_BUCKET_MODULES']        
+        s3 = boto3.client('s3',region_name=region)
+
+        # S3 configuration
+        s3_bucket = os.environ['S3_BUCKET_MODULES']
+        s3_prefix = ""
+        
+        # GitHub configuration
+        github_repo = "aws-samples/sample-tagger"
+        github_branch = "main"
+        github_dir = "modules"
+        
+        # Create temporary directory
+        temp_dir = "/tmp/repo_download"
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir)
+        
+        # Download repository as zip
+        zip_url = f"https://github.com/{github_repo}/archive/{github_branch}.zip"
+        zip_path = f"/tmp/{github_branch}.zip"
+        
+        logger.info(f"Downloading repository from {zip_url}")
+        urllib.request.urlretrieve(zip_url, zip_path)
+        
+        # Extract the repo
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall("/tmp")
+        
+        # Path to the extracted directory containing the target folder
+        extracted_dir = f"/tmp/sample-tagger-{github_branch}"
+        source_dir = os.path.join(extracted_dir, github_dir)
+        
+        # Initialize S3 client
+        s3 = boto3.client('s3')
+        
+        # Upload only .py files to S3
+        file_count = 0
+        for root, dirs, files in os.walk(source_dir):
+            for file in files:
+                # Only process Python files
+                if file.endswith('.py'):
+                    local_path = os.path.join(root, file)
+                    # Get relative path from the modules directory
+                    relative_path = os.path.relpath(local_path, source_dir)
+                    s3_key = s3_prefix + relative_path
+                    
+                    logger.info(f"Uploading Python file {local_path} to s3://{s3_bucket}/{s3_key}")
+                    s3.upload_file(local_path, s3_bucket, s3_key)
+                    print(f"Uploading Python file {local_path} to s3://{s3_bucket}/{s3_key}")
+                    file_count += 1
+        
+        # Clean up
+        os.remove(zip_path)
+        shutil.rmtree("/tmp/sample-tagger-main")
+        
+        
+
+        return create_response(200, { 
+                                        "response" :  { "status" : "success", "files" : file_count }
+                                    }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in fn_25_sync_modules_from_repo: {str(e)}")
+        return create_error_response(
+            500,
+            f'Internal server error : {e}',
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+
+
 ######################################################
 ######################################################
 ###
@@ -1806,6 +1895,8 @@ def lambda_handler(event, context):
         elif parameters['processId'] == '24-get-profile-catalog':
             response = fn_24_get_profile_catalog(parameters)         
 
+        elif parameters['processId'] == '25-sync-modules-from-repo':
+            response = fn_25_sync_modules_from_repo(parameters)         
 
 
 

@@ -629,6 +629,7 @@ function Application() {
                 <SpaceBetween direction="horizontal" size="xs">
                   <Button variant="link"  
                           onClick={() => { 
+                                    setIsReadOnly(true);
                                     setVisibleCreateProfile(false);
                                 }}
                   >
@@ -639,6 +640,7 @@ function Application() {
                                       currentProfileName.current = profileName;
                                       handleClickCreateProfile();
                                       setVisibleCreateProfile(false);
+                                      setIsReadOnly(true);
                                   }}
                   >
                     Create

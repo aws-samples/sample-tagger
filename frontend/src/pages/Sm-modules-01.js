@@ -222,6 +222,64 @@ function Application() {
       }
     };
 
+
+
+     //--## Sync modules
+     async function syncModules(){
+      try {
+            
+            setApplicationMessage([
+            {
+              type: "info",
+              content: "Latest bundle module is been downloaded...",
+              dismissible: true,
+              dismissLabel: "Dismiss message",
+              onDismiss: () => setApplicationMessage([]),
+              id: "message_1"
+                        }
+            ]);
+
+            var parameters = {                         
+                            processId : "25-sync-modules-from-repo"
+            };        
+            
+            const api = createApiObject({ method : 'POST', async : true });          
+            api.onload = function() {                    
+                      if (api.status === 200) {    
+
+                          var response = JSON.parse(api.responseText)?.['response'];   
+                          //console.log(response);
+                          gatherModules();
+                          setApplicationMessage([
+                            {
+                              type: "success",
+                              content: 
+                                        <>
+                                        Latest bundle module has been downloaded successfully, {response.files} modules have been downloaded. Update [IAMChildRoleTaggerSolution]                                   
+                                        IAM role manually accordingly services used by modules updated. Review following {" "}
+                                        <Link external color="inverted" href="https://github.com/aws-samples/sample-tagger/blob/main/cloudformation.iam.role.yaml">
+                                        link
+                                        </Link> {" "} for more information.
+                                        </>,
+                              dismissible: true,
+                              dismissLabel: "Dismiss message",
+                              onDismiss: () => setApplicationMessage([]),
+                              id: "message_1"
+                            }
+                          ]);
+                        
+                      }
+            };
+            api.send(JSON.stringify({ parameters : parameters }));  
+
+       
+            
+      }
+      catch(err){
+            console.log(err);
+            console.log('Timeout API error - PID: 25-sync-modules-from-repo');                  
+      }
+    };
   
     function findElementByLabel(arr, searchLabel) {
       return arr.find(element => element.label === searchLabel) || null;
@@ -272,10 +330,10 @@ function Application() {
                                           />
                                       </FormField>
                                     </td>
-                                    <td valign="middle" style={{"width":"30%", "padding-right": "2em", "text-align": "center"}}>  
+                                    <td valign="middle" style={{"width":"20%", "padding-right": "2em", "text-align": "center"}}>  
                                           
                                     </td>
-                                    <td valign="middle" style={{"width":"35%", "padding-right": "2em", "text-align": "center"}}>  
+                                    <td valign="middle" style={{"width":"45%", "padding-right": "2em", "text-align": "center"}}>  
                                             <Box float="right">
                                               <SpaceBetween direction="horizontal" size="xs">
                                                 
@@ -287,13 +345,20 @@ function Application() {
                                                     }}>
 
                                                 </Button>
+                                                <Button                                                        
+                                                  onClick={syncModules}
+                                                  disabled={visibleEditModule}
+                                                >
+                                                  Synchronize
+                                                </Button>  
                                                 <Button external={false}                                                        
                                                         iconAlign="right"
                                                         iconName="external"
                                                         target="_blank"
-                                                        href={"/modules/validation?mtid=" + currentModuleId.current}                                                        
+                                                        href={"/modules/validation?mtid=" + currentModuleId.current}       
+                                                        disabled={visibleEditModule}                                                 
                                                 >
-                                                  Validate module
+                                                  Validate
                                                 </Button>  
                                                 <ButtonDropdown
                                                   disabled={visibleEditModule}
@@ -318,8 +383,8 @@ function Application() {
                                                           
                                                           case "delete":
                                                             setVisibleDeleteModule(true);
-                                                            break;
-
+                                                            break;                                                          
+                                                          
                                                       }
                                                         
                                                     }
