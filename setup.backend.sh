@@ -48,14 +48,20 @@ aws s3 cp artifacts/layers/. s3://$STACK_ID/layers/ --recursive
 #######
 
 echo -e "\n|--#### (2/5) - Creating AWS Resources  ...\n\n"
-aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
-#aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=DSQLCluster,ParameterValue=$dsql_cluster_endpoint ParameterKey=DSQLClusterId,ParameterValue=$dsql_cluster_identifier --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file cloudformation.iam.policy.yaml --stack-name policy-tagger-stack --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation wait stack-create-complete --stack-name "policy-tagger-stack" --region $AWS_REGION
+
+aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=PolicyStackName,ParameterValue=policy-tagger-stack --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME-backend" --region $AWS_REGION
+
+#aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
+
 
 
 echo -e "\n|--#### (4/7) -  Removing artifacts ...\n\n"
 aws s3 rm s3://$STACK_ID/ --recursive
 aws s3 rb s3://$STACK_ID
+
 
 export $(aws cloudformation describe-stacks --stack-name "$STACK_NAME-backend" --output text --query 'Stacks[0].Outputs[].join(`=`, [join(`_`, [`CF`, `OUT`, OutputKey]), OutputValue ])' --region $AWS_REGION)
 
