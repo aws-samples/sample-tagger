@@ -2,7 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Tagger Solution - Policy'
 
 Resources:
-  IAMPolicyTaggerSolution:
+
+  IAMPolicyTaggerSolutionS1:
       Type: AWS::IAM::ManagedPolicy
       Properties:
           ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s1", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
@@ -120,7 +121,19 @@ Resources:
                         "workspaces:DeleteTags"
                     ],
                     "Resource": "*"
-                  },
+                  }
+                ]
+              }
+
+
+  IAMPolicyTaggerSolutionS2:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s2", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [                  
                   {
                     "Effect": "Allow",
                     "Action": [                        
@@ -296,9 +309,20 @@ Resources:
                         "states:UntagResource"
                     ],
                     "Resource": "*"
-                  },
+                  }
+                ]
+              }
+
+
+  IAMPolicyTaggerSolutionS3:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s3", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [                                    
                   {
-                    "Sid": "ApprunnerExactPermissions",
                     "Effect": "Allow",
                     "Action": [
                         "apprunner:ListAutoScalingConfigurations",
@@ -309,14 +333,7 @@ Resources:
                         "apprunner:ListVpcConnectors",
                         "apprunner:ListVpcIngressConnections",
                         "apprunner:TagResource",
-                        "apprunner:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "BedrockExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "apprunner:UntagResource",
                         "bedrock:ListCustomModelDeployments",
                         "bedrock:ListCustomModels",
                         "bedrock:ListEvaluationJobs",
@@ -332,14 +349,7 @@ Resources:
                         "bedrock:ListProvisionedModelThroughputs",
                         "bedrock:ListTagsForResource",
                         "bedrock:TagResource",
-                        "bedrock:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "BedrockAgentExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "bedrock:UntagResource",
                         "bedrock:ListAgentActionGroups",
                         "bedrock:ListAgentAliases",
                         "bedrock:ListAgentCollaborators",
@@ -355,26 +365,12 @@ Resources:
                         "bedrock:ListPrompts",
                         "bedrock:ListTagsForResource",
                         "bedrock:TagResource",
-                        "bedrock:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "BedrockDataAutomationExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "bedrock:UntagResource",
                         "bedrock:ListBlueprints",
                         "bedrock:ListDataAutomationProjects",
                         "bedrock:ListTagsForResource",
                         "bedrock:TagResource",
-                        "bedrock:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "CloudfrontExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "bedrock:UntagResource",
                         "cloudfront:ListCachePolicies",
                         "cloudfront:ListContinuousDeploymentPolicies",
                         "cloudfront:ListDistributions",
@@ -389,39 +385,18 @@ Resources:
                         "cloudfront:ListStreamingDistributions",
                         "cloudfront:ListTagsForResource",
                         "cloudfront:TagResource",
-                        "cloudfront:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "CloudhsmExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "cloudfront:UntagResource",
                         "cloudhsm:AddTagsToResource",
                         "cloudhsm:ListHapgs",
                         "cloudhsm:ListHsms",
                         "cloudhsm:ListLunaClients",
                         "cloudhsm:ListTagsForResource",
-                        "cloudhsm:RemoveTagsFromResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "Cloudhsmv2ExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "cloudhsmv2:DescribeBackups",
+                        "cloudhsm:RemoveTagsFromResource",
+                        cloudhsmv2:DescribeBackups",
                         "cloudhsmv2:DescribeClusters",
                         "cloudhsmv2:ListTags",
                         "cloudhsmv2:TagResource",
-                        "cloudhsmv2:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "ComprehendExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "cloudhsmv2:UntagResource",
                         "comprehend:ListDocumentClassificationJobs",
                         "comprehend:ListDocumentClassifiers",
                         "comprehend:ListDominantLanguageDetectionJobs",
@@ -437,14 +412,7 @@ Resources:
                         "comprehend:ListTargetedSentimentDetectionJobs",
                         "comprehend:ListTopicsDetectionJobs",
                         "comprehend:TagResource",
-                        "comprehend:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "ConnectExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "comprehend:UntagResource",
                         "connect:ListContactFlowModules",
                         "connect:ListContactFlows",
                         "connect:ListDefaultVocabularies",
@@ -468,7 +436,19 @@ Resources:
                         "connect:UntagResource"
                     ],
                     "Resource": "*"
-                },
+                }
+                ]
+              }
+
+
+  IAMPolicyTaggerSolutionS4:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s4", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [                                                      
                 {
                     "Sid": "ConnectcampaignsExactPermissions",
                     "Effect": "Allow",
@@ -476,25 +456,11 @@ Resources:
                         "connect-campaigns:ListCampaigns",
                         "connect-campaigns:ListTagsForResource",
                         "connect-campaigns:TagResource",
-                        "connect-campaigns:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "Connectcampaignsv2ExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "connect-campaigns:UntagResource",
                         "connect-campaigns:ListCampaigns",
                         "connect-campaigns:ListTagsForResource",
                         "connect-campaigns:TagResource",
-                        "connect-campaigns:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "ConnectcasesExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "connect-campaigns:UntagResource",
                         "connect-cases:ListCaseRules",
                         "connect-cases:ListDomains",
                         "connect-cases:ListFields",
@@ -503,14 +469,7 @@ Resources:
                         "connect-cases:ListTemplates",
                         "connect-cases:SearchCases",
                         "connect-cases:TagResource",
-                        "connect-cases:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "DatabrewExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "connect-cases:UntagResource",
                         "databrew:ListDatasets",
                         "databrew:ListJobs",
                         "databrew:ListProjects",
@@ -519,28 +478,14 @@ Resources:
                         "databrew:ListSchedules",
                         "databrew:ListTagsForResource",
                         "databrew:TagResource",
-                        "databrew:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "DatasyncExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "databrew:UntagResource",
                         "datasync:ListAgents",
                         "datasync:ListLocations",
                         "datasync:ListTagsForResource",
                         "datasync:ListTaskExecutions",
                         "datasync:ListTasks",
                         "datasync:TagResource",
-                        "datasync:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "DatazoneExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "datasync:UntagResource",
                         "datazone:ListAssetTypes",
                         "datazone:ListDataSources",
                         "datazone:ListDomains",
@@ -552,14 +497,7 @@ Resources:
                         "datazone:ListProjects",
                         "datazone:ListTagsForResource",
                         "datazone:TagResource",
-                        "datazone:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "DirectconnectExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "datazone:UntagResource",
                         "directconnect:DescribeConnections",
                         "directconnect:DescribeDirectConnectGatewayAssociationProposals",
                         "directconnect:DescribeDirectConnectGatewayAssociations",
@@ -569,27 +507,13 @@ Resources:
                         "directconnect:DescribeTags",
                         "directconnect:DescribeVirtualInterfaces",
                         "directconnect:TagResource",
-                        "directconnect:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "DrsExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "directconnect:UntagResource",
                         "drs:DescribeLaunchConfigurationTemplates",
                         "drs:DescribeReplicationConfigurationTemplates",
                         "drs:DescribeSourceServers",
                         "drs:ListTagsForResource",
                         "drs:TagResource",
-                        "drs:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "Ec2ExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "drs:UntagResource",
                         "ec2:CreateTags",
                         "ec2:DeleteTags",
                         "ec2:DescribeAddresses",
@@ -630,177 +554,19 @@ Resources:
                         "ec2:DescribeVpnGateways"
                     ],
                     "Resource": "*"
-                },
-                {
-                    "Sid": "ElasticbeanstalkExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "elasticbeanstalk:DescribeApplicationVersions",
-                        "elasticbeanstalk:DescribeApplications",
-                        "elasticbeanstalk:DescribeConfigurationSettings",
-                        "elasticbeanstalk:DescribeEnvironments",
-                        "elasticbeanstalk:ListPlatformVersions",
-                        "elasticbeanstalk:ListTagsForResource",
-                        "elasticbeanstalk:UpdateTagsForResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "KafkaExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "kafka:ListClustersV2",
-                        "kafka:ListConfigurations",
-                        "kafka:ListReplicators",
-                        "kafka:ListTagsForResource",
-                        "kafka:ListVpcConnections",
-                        "kafka:TagResource",
-                        "kafka:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "KafkaconnectExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "kafkaconnect:ListConnectors",
-                        "kafkaconnect:ListCustomPlugins",
-                        "kafkaconnect:ListTagsForResource",
-                        "kafkaconnect:ListWorkerConfigurations",
-                        "kafkaconnect:TagResource",
-                        "kafkaconnect:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "KendraExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "kendra:ListAccessControlConfigurations",
-                        "kendra:ListDataSources",
-                        "kendra:ListExperiences",
-                        "kendra:ListFaqs",
-                        "kendra:ListFeaturedResultsSets",
-                        "kendra:ListIndices",
-                        "kendra:ListQuerySuggestionsBlockLists",
-                        "kendra:ListTagsForResource",
-                        "kendra:ListThesauri",
-                        "kendra:TagResource",
-                        "kendra:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "KendrarankingExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "kendra-ranking:ListRescoreExecutionPlans",
-                        "kendra-ranking:ListTagsForResource",
-                        "kendra-ranking:TagResource",
-                        "kendra-ranking:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "MgnExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "mgn:DescribeSourceServers",
-                        "mgn:ListApplications",
-                        "mgn:ListConnectors",
-                        "mgn:ListTagsForResource",
-                        "mgn:ListWaves",
-                        "mgn:TagResource",
-                        "mgn:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "NeptuneExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "neptune:AddTagsToResource",
-                        "neptune:DescribeDbClusterEndpoints",
-                        "neptune:DescribeDbClusterParameterGroups",
-                        "neptune:DescribeDbClusterSnapshots",
-                        "neptune:DescribeDbClusters",
-                        "neptune:DescribeDbInstances",
-                        "neptune:DescribeDbParameterGroups",
-                        "neptune:DescribeDbSubnetGroups",
-                        "neptune:DescribeEventSubscriptions",
-                        "neptune:DescribeGlobalClusters",
-                        "neptune:ListTagsForResource",
-                        "neptune:RemoveTagsFromResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "NeptuneGraphExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "neptune-graph:ListExportTasks",
-                        "neptune-graph:ListGraphSnapshots",
-                        "neptune-graph:ListGraphs",
-                        "neptune-graph:ListImportTasks",
-                        "neptune-graph:ListPrivateGraphEndpoints",
-                        "neptune-graph:ListQueries",
-                        "neptune-graph:ListTagsForResource",
-                        "neptune-graph:TagResource",
-                        "neptune-graph:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "NetworkFirewallExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "network-firewall:ListFirewallPolicies",
-                        "network-firewall:ListFirewalls",
-                        "network-firewall:ListRuleGroups",
-                        "network-firewall:ListTagsForResource",
-                        "network-firewall:ListTlsInspectionConfigurations",
-                        "network-firewall:TagResource",
-                        "network-firewall:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "RekognitionExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "rekognition:DescribeCollection",
-                        "rekognition:DescribeProjects",
-                        "rekognition:ListCollections",
-                        "rekognition:ListStreamProcessors",
-                        "rekognition:ListTagsForResource",
-                        "rekognition:TagResource",
-                        "rekognition:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "S3ControlExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "s3control:DeleteAccessPointTagging",
-                        "s3control:DeleteJobTagging",
-                        "s3control:DeleteStorageLensConfigurationTagging",
-                        "s3control:GetJobTagging",
-                        "s3control:GetStorageLensConfigurationTagging",
-                        "s3control:ListAccessGrants",
-                        "s3control:ListAccessGrantsInstances",
-                        "s3control:ListAccessGrantsLocations",
-                        "s3control:ListAccessPoints",
-                        "s3control:ListJobs",
-                        "s3control:ListMultiRegionAccessPoints",
-                        "s3control:ListStorageLensConfigurations",
-                        "s3control:ListStorageLensGroups",
-                        "s3control:PutAccessPointTagging",
-                        "s3control:PutJobTagging",
-                        "s3control:PutStorageLensConfigurationTagging"
-                    ],
-                    "Resource": "*"
-                },
+                }
+                ]
+              }
+
+
+  IAMPolicyTaggerSolutionS5:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s5", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [                                                                                                  
                 {
                     "Sid": "SagemakerExactPermissions",
                     "Effect": "Allow",
@@ -830,27 +596,13 @@ Resources:
                         "sagemaker:ListTransformJobs",
                         "sagemaker:ListTrialComponents",
                         "sagemaker:ListTrials",
-                        "sagemaker:ListUserProfiles"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "SagemakerGeospatialExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "sagemaker:ListUserProfiles",
                         "sagemaker-geospatial:ListEarthObservationJobs",
                         "sagemaker-geospatial:ListRasterDataCollections",
                         "sagemaker-geospatial:ListTagsForResource",
                         "sagemaker-geospatial:ListVectorEnrichmentJobs",
                         "sagemaker-geospatial:TagResource",
-                        "sagemaker-geospatial:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "StoragegatewayExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "sagemaker-geospatial:UntagResource",
                         "storagegateway:AddTagsToResource",
                         "storagegateway:DescribeFileSystemAssociations",
                         "storagegateway:DescribeTapes",
@@ -859,27 +611,13 @@ Resources:
                         "storagegateway:ListTagsForResource",
                         "storagegateway:ListTapePools",
                         "storagegateway:ListVolumes",
-                        "storagegateway:RemoveTagsFromResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "TextractExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "storagegateway:RemoveTagsFromResource",
                         "textract:GetAdapter",
                         "textract:ListAdapterVersions",
                         "textract:ListAdapters",
                         "textract:ListTagsForResource",
                         "textract:TagResource",
-                        "textract:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "WafExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "textract:UntagResource",
                         "waf:ListByteMatchSets",
                         "waf:ListGeoMatchSets",
                         "waf:ListIpSets",
@@ -894,14 +632,7 @@ Resources:
                         "waf:ListWebAcls",
                         "waf:ListXssMatchSets",
                         "waf:TagResource",
-                        "waf:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "WafRegionalExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "waf:UntagResource",
                         "waf-regional:ListByteMatchSets",
                         "waf-regional:ListGeoMatchSets",
                         "waf-regional:ListIpSets",
@@ -916,14 +647,7 @@ Resources:
                         "waf-regional:ListWebAcls",
                         "waf-regional:ListXssMatchSets",
                         "waf-regional:TagResource",
-                        "waf-regional:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "Wafv2ExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "waf-regional:UntagResource",
                         "wafv2:ListIpSets",
                         "wafv2:ListManagedRuleSets",
                         "wafv2:ListRegexPatternSets",
@@ -931,14 +655,7 @@ Resources:
                         "wafv2:ListTagsForResource",
                         "wafv2:ListWebAcls",
                         "wafv2:TagResource",
-                        "wafv2:UntagResource"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Sid": "WisdomExactPermissions",
-                    "Effect": "Allow",
-                    "Action": [
+                        "wafv2:UntagResource",
                         "wisdom:ListAssistantAssociations",
                         "wisdom:ListAssistants",
                         "wisdom:ListContents",
@@ -956,9 +673,128 @@ Resources:
               }
 
 
+  IAMPolicyTaggerSolutionS6:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution-s6", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [                                                                                  
+                {
+                    "Sid": "ElasticbeanstalkExactPermissions",
+                    "Effect": "Allow",
+                    "Action": [
+                        "elasticbeanstalk:DescribeApplicationVersions",
+                        "elasticbeanstalk:DescribeApplications",
+                        "elasticbeanstalk:DescribeConfigurationSettings",
+                        "elasticbeanstalk:DescribeEnvironments",
+                        "elasticbeanstalk:ListPlatformVersions",
+                        "elasticbeanstalk:ListTagsForResource",
+                        "elasticbeanstalk:UpdateTagsForResource",
+                        "kafka:ListClustersV2",
+                        "kafka:ListConfigurations",
+                        "kafka:ListReplicators",
+                        "kafka:ListTagsForResource",
+                        "kafka:ListVpcConnections",
+                        "kafka:TagResource",
+                        "kafka:UntagResource",
+                        "kafkaconnect:ListConnectors",
+                        "kafkaconnect:ListCustomPlugins",
+                        "kafkaconnect:ListTagsForResource",
+                        "kafkaconnect:ListWorkerConfigurations",
+                        "kafkaconnect:TagResource",
+                        "kafkaconnect:UntagResource",
+                        "kendra:ListAccessControlConfigurations",
+                        "kendra:ListDataSources",
+                        "kendra:ListExperiences",
+                        "kendra:ListFaqs",
+                        "kendra:ListFeaturedResultsSets",
+                        "kendra:ListIndices",
+                        "kendra:ListQuerySuggestionsBlockLists",
+                        "kendra:ListTagsForResource",
+                        "kendra:ListThesauri",
+                        "kendra:TagResource",
+                        "kendra:UntagResource",
+                        "kendra-ranking:ListRescoreExecutionPlans",
+                        "kendra-ranking:ListTagsForResource",
+                        "kendra-ranking:TagResource",
+                        "kendra-ranking:UntagResource",
+                        "mgn:DescribeSourceServers",
+                        "mgn:ListApplications",
+                        "mgn:ListConnectors",
+                        "mgn:ListTagsForResource",
+                        "mgn:ListWaves",
+                        "mgn:TagResource",
+                        "mgn:UntagResource",
+                        "neptune:AddTagsToResource",
+                        "neptune:DescribeDbClusterEndpoints",
+                        "neptune:DescribeDbClusterParameterGroups",
+                        "neptune:DescribeDbClusterSnapshots",
+                        "neptune:DescribeDbClusters",
+                        "neptune:DescribeDbInstances",
+                        "neptune:DescribeDbParameterGroups",
+                        "neptune:DescribeDbSubnetGroups",
+                        "neptune:DescribeEventSubscriptions",
+                        "neptune:DescribeGlobalClusters",
+                        "neptune:ListTagsForResource",
+                        "neptune:RemoveTagsFromResource",
+                        "neptune-graph:ListExportTasks",
+                        "neptune-graph:ListGraphSnapshots",
+                        "neptune-graph:ListGraphs",
+                        "neptune-graph:ListImportTasks",
+                        "neptune-graph:ListPrivateGraphEndpoints",
+                        "neptune-graph:ListQueries",
+                        "neptune-graph:ListTagsForResource",
+                        "neptune-graph:TagResource",
+                        "neptune-graph:UntagResource",
+                        "network-firewall:ListFirewallPolicies",
+                        "network-firewall:ListFirewalls",
+                        "network-firewall:ListRuleGroups",
+                        "network-firewall:ListTagsForResource",
+                        "network-firewall:ListTlsInspectionConfigurations",
+                        "network-firewall:TagResource",
+                        "network-firewall:UntagResource",
+                        "rekognition:DescribeCollection",
+                        "rekognition:DescribeProjects",
+                        "rekognition:ListCollections",
+                        "rekognition:ListStreamProcessors",
+                        "rekognition:ListTagsForResource",
+                        "rekognition:TagResource",
+                        "rekognition:UntagResource",
+                        "s3control:DeleteAccessPointTagging",
+                        "s3control:DeleteJobTagging",
+                        "s3control:DeleteStorageLensConfigurationTagging",
+                        "s3control:GetJobTagging",
+                        "s3control:GetStorageLensConfigurationTagging",
+                        "s3control:ListAccessGrants",
+                        "s3control:ListAccessGrantsInstances",
+                        "s3control:ListAccessGrantsLocations",
+                        "s3control:ListAccessPoints",
+                        "s3control:ListJobs",
+                        "s3control:ListMultiRegionAccessPoints",
+                        "s3control:ListStorageLensConfigurations",
+                        "s3control:ListStorageLensGroups",
+                        "s3control:PutAccessPointTagging",
+                        "s3control:PutJobTagging",
+                        "s3control:PutStorageLensConfigurationTagging"
+                    ],
+                    "Resource": "*"
+                }
+                ]
+              }
+
+
+
 Outputs:
-  PolicyArn:
-    Description: The ARN of the IAM Policy Tagger Solution
-    Value: !Ref IAMPolicyTaggerSolution
+  PolicyArnS1:
+    Description: The ARN of the IAM Policy Tagger Solution-S1
+    Value: !Ref IAMPolicyTaggerSolutionS1
     Export:
-      Name: !Sub "${AWS::StackName}-PolicyArn"
+      Name: !Sub "${AWS::StackName}-PolicyArnS1"
+
+  PolicyArnS2:
+    Description: The ARN of the IAM Policy Tagger Solution-S2
+    Value: !Ref IAMPolicyTaggerSolutionS2
+    Export:
+      Name: !Sub "${AWS::StackName}-PolicyArnS2"

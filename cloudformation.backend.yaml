@@ -11,7 +11,7 @@ Parameters:
   S3Artifacts:
       Type: String
       Description: S3 Artifacts
-      
+
   PolicyStackName:
       Type: String
       Description: "Name of the stack containing the IAM Policy"
@@ -609,7 +609,9 @@ Resources:
           MaxSessionDuration: 3600
           ManagedPolicyArns:
               - !ImportValue 
-                Fn::Sub: "${PolicyStackName}-PolicyArn"
+                Fn::Sub: "${PolicyStackName}-PolicyArnS1"
+            - !ImportValue 
+                Fn::Sub: "${PolicyStackName}-PolicyArnS2"
     
         
 
