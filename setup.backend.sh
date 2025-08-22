@@ -39,7 +39,7 @@ cd ..
 aws s3 mb s3://$STACK_ID
 aws s3 cp artifacts/functions/. s3://$STACK_ID/functions/ --recursive
 aws s3 cp artifacts/layers/. s3://$STACK_ID/layers/ --recursive
-
+aws s3 cp cloudformation.backend.yaml s3://$STACK_ID/
 
 
 
@@ -48,15 +48,11 @@ aws s3 cp artifacts/layers/. s3://$STACK_ID/layers/ --recursive
 #######
 
 echo -e "\n|--#### (2/5) - Creating AWS Resources  ...\n\n"
-aws cloudformation create-stack --template-body file://cloudformation.iam.policy.yaml --stack-name policy-tagger-stack --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
-aws cloudformation wait stack-create-complete --stack-name "policy-tagger-stack" --region $AWS_REGION
 
-aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=PolicyStackName,ParameterValue=policy-tagger-stack --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID --template-url "https://$STACK_ID.s3.$AWS_REGION.amazonaws.com/cloudformation.backend.yaml"  --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME-backend" --region $AWS_REGION
 
 #aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
-
-
 
 echo -e "\n|--#### (4/7) -  Removing artifacts ...\n\n"
 aws s3 rm s3://$STACK_ID/ --recursive
