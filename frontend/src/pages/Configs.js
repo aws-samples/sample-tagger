@@ -5,7 +5,7 @@ export const configuration =
     "apps-settings": {
         "refresh-interval": 5*1000,      
         "api-url" : api["url"],          
-        "release" : "0.1.0",
+        "release" : "2025.08.22.1500",
         "application-title": "Taggr Solution",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",
     },
