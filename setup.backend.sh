@@ -48,7 +48,7 @@ aws s3 cp artifacts/layers/. s3://$STACK_ID/layers/ --recursive
 #######
 
 echo -e "\n|--#### (2/5) - Creating AWS Resources  ...\n\n"
-aws cloudformation deploy --template-body file://cloudformation.iam.policy.yaml --stack-name policy-tagger-stack --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --template-body file://cloudformation.iam.policy.yaml --stack-name policy-tagger-stack --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation wait stack-create-complete --stack-name "policy-tagger-stack" --region $AWS_REGION
 
 aws cloudformation create-stack --stack-name "$STACK_NAME-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=PolicyStackName,ParameterValue=policy-tagger-stack --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
