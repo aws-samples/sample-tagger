@@ -53,7 +53,9 @@ export default function Auth({children}) {
       
         return (
           <Flex justifyContent="center" padding={tokens.space.medium}>
-            <Text></Text>
+              <Heading level={6}>                  
+                  Version: {configuration['apps-settings']['release']}                    
+              </Heading> 
           </Flex>
         );
     }
