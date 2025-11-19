@@ -1,0 +1,533 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MAP Tagger ECS Task with Lambda Orchestrator'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID for ECS tasks
+  
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for ECS tasks
+  
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository URL for MAP tagger source code
+    Default: "https://github.com/aws-samples/sample-tagger"
+  
+  # Required parameters for Lambda configuration
+  Accounts:
+    Type: CommaDelimitedList
+    Description: Target AWS account IDs (comma-separated)
+  
+  Regions:
+    Type: CommaDelimitedList
+    Description: AWS regions to process (comma-separated)
+    Default: "us-east-1"
+  
+  StartDate:
+    Type: String
+    Description: Only tag resources created after this date (YYYY-MM-DD)
+    Default: "2024-01-01"
+  
+  MapTagKey:
+    Type: String
+    Description: MAP tag key to apply
+    Default: "map-migrated"
+  
+  MapTagValue:
+    Type: String
+    Description: MAP tag value to apply
+    Default: "mig12345"
+  
+  Services:
+    Type: CommaDelimitedList
+    Description: AWS services to tag (leave empty for all supported services)
+    Default: ""
+  
+  DockerfilePath:
+    Type: String
+    Description: Path to Dockerfile relative to repository root
+    Default: "automation/Dockerfile"
+
+Resources:
+  # ECR Repository
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: map-tagger
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+  # CodeBuild Service Role
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchImportLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: "*"
+
+  # CodeBuild Project
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-map-tagger-build"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/amazonlinux-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Name: IMAGE_REPO_NAME
+            Value: map-tagger
+          - Name: IMAGE_TAG
+            Value: latest
+          - Name: DOCKERFILE_PATH
+            Value: !Ref DockerfilePath
+      Source:
+        Type: GITHUB
+        Location: !Ref GitHubRepo
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - echo Logging in to Amazon ECR...
+                - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+            build:
+              commands:
+                - echo Build started on `date`
+                - echo Building the Docker image...
+                - docker build -f $DOCKERFILE_PATH -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+                - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+            post_build:
+              commands:
+                - echo Build completed on `date`
+                - echo Pushing the Docker image...
+                - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+  # Lambda to trigger CodeBuild
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: !GetAtt CodeBuildProject.Arn
+
+  StartCodeBuildFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 900
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import time
+          
+          def handler(event, context):
+              props = event['ResourceProperties']
+              project_name = props['ProjectName']
+              
+              codebuild = boto3.client('codebuild')
+              response_data = {}
+              
+              try:
+                  if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                      print(f"Starting CodeBuild project: {project_name}")
+                      build = codebuild.start_build(projectName=project_name)
+                      build_id = build['build']['id']
+                      
+                      print(f"Build started with ID: {build_id}")
+                      response_data['BuildId'] = build_id
+                      
+                      status = 'IN_PROGRESS'
+                      while status == 'IN_PROGRESS':
+                          time.sleep(30)
+                          build_status = codebuild.batch_get_builds(ids=[build_id])
+                          status = build_status['builds'][0]['buildStatus']
+                          print(f"Current build status: {status}")
+                          
+                          if context.get_remaining_time_in_millis() <= 60000:
+                              print("Lambda timeout approaching. Continuing...")
+                              break
+                      
+                      if status == 'SUCCEEDED':
+                          print("Build completed successfully")
+                          image_uri = f"{context.invoked_function_arn.split(':')[4]}.dkr.ecr.{context.invoked_function_arn.split(':')[3]}.amazonaws.com/map-tagger:latest"
+                          response_data['ImageURI'] = image_uri
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                      else:
+                          print(f"Build status: {status}")
+                          cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+                  
+                  elif event['RequestType'] == 'Delete':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+              
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+
+  BuildDockerImageCustomResource:
+    Type: Custom::BuildDockerImage
+    DependsOn: 
+      - CodeBuildProject
+      - ECRRepository
+    Properties:
+      ServiceToken: !GetAtt StartCodeBuildFunction.Arn
+      ProjectName: !Ref CodeBuildProject
+  # SQS Queue for tagging jobs
+  TaggingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: map-tagger-queue
+      VisibilityTimeoutSeconds: 900  # 15 minutes
+      MessageRetentionPeriod: 1209600  # 14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TaggingDLQ.Arn
+        maxReceiveCount: 3
+
+  # Dead Letter Queue
+  TaggingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: map-tagger-dlq
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: map-tagger-cluster
+
+  # ECS Task Definition
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: map-tagger-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 1024
+      Memory: 2048
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: map-tagger
+          Image: !GetAtt BuildDockerImageCustomResource.ImageURI
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: QUEUE_URL
+              Value: !Ref TaggingQueue
+            - Name: MAX_EMPTY_POLLS
+              Value: "3"
+
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/map-tagger
+      RetentionInDays: 30
+
+  # Security Group for ECS tasks
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for MAP tagger ECS tasks
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  # Lambda Orchestrator Function
+  OrchestratorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: map-tagger-orchestrator
+      Runtime: python3.9
+      Handler: lambda_orchestrator.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          from datetime import datetime
+          
+          def launch_ecs_tasks(task_count):
+              ecs = boto3.client('ecs')
+              try:
+                  cluster = os.environ.get('ECS_CLUSTER')
+                  task_definition = os.environ.get('TASK_DEFINITION')
+                  subnets = os.environ.get('SUBNETS', '').split(',')
+                  security_groups = os.environ.get('SECURITY_GROUPS', '').split(',')
+                  
+                  for _ in range(task_count):
+                      response = ecs.run_task(
+                          cluster=cluster,
+                          taskDefinition=task_definition,
+                          launchType='FARGATE',
+                          networkConfiguration={
+                              'awsvpcConfiguration': {
+                                  'subnets': subnets,
+                                  'securityGroups': security_groups,
+                                  'assignPublicIp': 'ENABLED'
+                              }
+                          }
+                      )
+                      print(f"Launched ECS task: {response['tasks'][0]['taskArn']}")
+              except Exception as e:
+                  print(f"Error launching ECS tasks: {e}")
+                  raise
+          
+          def get_supported_services():
+              return [
+                  'apigateway', 'apigatewayv2', 'apprunner', 'athena', 'backup',
+                  'bedrock', 'bedrock-agent', 'bedrock-data-automation', 'cloudfront',
+                  'cloudhsm', 'cloudhsmv2', 'cognito-identity', 'cognito-idp',
+                  'comprehend', 'connect', 'connectcampaigns', 'connectcampaignsv2',
+                  'connectcases', 'databrew', 'datasync', 'datazone', 'directconnect',
+                  'docdb', 'drs', 'ds', 'dynamodb', 'ec2', 'ecr', 'ecs', 'efs',
+                  'eks', 'elasticache', 'elasticbeanstalk', 'elb', 'elbv2', 'emr',
+                  'fsx', 'glacier', 'glue', 'kafka', 'kafkaconnect', 'kendra',
+                  'kendraranking', 'kms', 'lambda', 'medical-imaging', 'memorydb',
+                  'mgn', 'neptune', 'neptune-graph', 'network-firewall', 'rds',
+                  'redshift', 'redshift-serverless', 'rekognition', 'route53',
+                  'route53domains', 'route53profiles', 'route53resolver',
+                  'route53-recovery-control-config', 'route53-recovery-readiness',
+                  's3', 's3control', 'sagemaker', 'sagemaker-geospatial',
+                  'secretsmanager', 'securityhub', 'sns', 'sqs', 'ssm',
+                  'ssm-contacts', 'ssm-incidents', 'stepfunctions', 'storagegateway',
+                  'textract', 'timestream-write', 'transfer', 'waf', 'waf-regional',
+                  'wafv2', 'wisdom', 'workspaces'
+              ]
+          
+          def lambda_handler(event, context):
+              accounts = os.environ.get('ACCOUNTS', '').split(',') if os.environ.get('ACCOUNTS') else []
+              regions = os.environ.get('REGIONS', 'us-east-1').split(',')
+              services = os.environ.get('SERVICES', '').split(',') if os.environ.get('SERVICES') else get_supported_services()
+              start_date = os.environ.get('START_DATE', '2024-01-01')
+              map_tag_key = os.environ.get('MAP_TAG_KEY', 'map-migrated')
+              map_tag_value = os.environ.get('MAP_TAG_VALUE', '12345')
+              
+              accounts = [acc.strip() for acc in accounts if acc.strip()]
+              regions = [reg.strip() for reg in regions if reg.strip()]
+              services = [svc.strip() for svc in services if svc.strip()]
+              
+              queue_url = os.environ.get('QUEUE_URL')
+              if not queue_url:
+                  raise ValueError("QUEUE_URL environment variable not set")
+              
+              sqs = boto3.client('sqs')
+              messages_sent = 0
+              
+              for account_id in accounts:
+                  for region in regions:
+                      for service in services:
+                          message = {
+                              'account_id': account_id,
+                              'region': region,
+                              'service': service,
+                              'start_date': start_date,
+                              'map_tag_key': map_tag_key,
+                              'map_tag_value': map_tag_value,
+                              'timestamp': datetime.utcnow().isoformat()
+                          }
+                          
+                          try:
+                              sqs.send_message(
+                                  QueueUrl=queue_url,
+                                  MessageBody=json.dumps(message)
+                              )
+                              messages_sent += 1
+                              print(f"Sent message for {service} in {account_id}/{region}")
+                          except Exception as e:
+                              print(f"Error sending message for {service} in {account_id}/{region}: {e}")
+              
+              if messages_sent > 0:
+                  messages_per_task = int(os.environ.get('MESSAGES_PER_TASK', '100'))
+                  max_tasks = int(os.environ.get('MAX_TASKS', '10'))
+                  task_count = min(messages_sent // messages_per_task + 1, max_tasks)
+                  print(f"Launching {task_count} tasks for {messages_sent} messages")
+                  
+                  try:
+                      launch_ecs_tasks(task_count)
+                  except Exception as e:
+                      print(f"Failed to launch ECS tasks: {e}")
+              
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({
+                      'message': f'Successfully queued {messages_sent} tagging jobs',
+                      'jobs_queued': messages_sent,
+                      'tasks_launched': task_count if messages_sent > 0 else 0
+                  })
+              }
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref TaggingQueue
+          ACCOUNTS: !Join [",", !Ref Accounts]
+          REGIONS: !Join [",", !Ref Regions]
+          SERVICES: !Join [",", !Ref Services]
+          START_DATE: !Ref StartDate
+          MAP_TAG_KEY: !Ref MapTagKey
+          MAP_TAG_VALUE: !Ref MapTagValue
+          ECS_CLUSTER: !Ref ECSCluster
+          TASK_DEFINITION: !Ref TaskDefinition
+          SUBNETS: !Join [",", !Ref SubnetIds]
+          SECURITY_GROUPS: !Ref ECSSecurityGroup
+          MESSAGES_PER_TASK: "100"
+          MAX_TASKS: "10"
+      Role: !GetAtt LambdaOrchestratorExecutionRole.Arn
+      Timeout: 300
+
+  # IAM Roles
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: MapTaggerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt TaggingQueue.Arn
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource: "arn:aws:iam::*:role/IAMChildRoleTaggerSolution"
+
+  LambdaOrchestratorExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: MapTaggerLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt TaggingQueue.Arn
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                  - ecs:DescribeTasks
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: 
+                  - !GetAtt TaskExecutionRole.Arn
+                  - !GetAtt TaskRole.Arn
+
+Outputs:
+  QueueURL:
+    Description: SQS Queue URL
+    Value: !Ref TaggingQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-QueueURL"
+  
+  LambdaFunctionName:
+    Description: Lambda Orchestrator Function Name
+    Value: !Ref OrchestratorFunction
+    Export:
+      Name: !Sub "${AWS::StackName}-LambdaFunction"
+  
+  ECSClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSCluster"
