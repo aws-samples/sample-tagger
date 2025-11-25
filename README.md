@@ -311,6 +311,8 @@ Note: Since this CloudFormation StackSet only deploys an IAM role, which is a gl
 
 The MAP Tagger automation solution provides a scalable, serverless approach to automatically tag AWS resources across multiple accounts and regions. This solution uses ECS Fargate tasks orchestrated by Lambda functions to process tagging jobs from an SQS queue.
 
+<img width="1089" alt="image" src="automation/map-tagger-architecture-final.png">
+
 #### Deployment Steps
 
 ##### 1. Deploy MAP Tagger Infrastructure
