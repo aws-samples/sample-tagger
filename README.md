@@ -306,6 +306,97 @@ Note: Since this CloudFormation StackSet only deploys an IAM role, which is a gl
 18.	Click Submit.
 
 
+
+### Automation
+
+The MAP Tagger automation solution provides a scalable, serverless approach to automatically tag AWS resources across multiple accounts and regions. This solution uses ECS Fargate tasks orchestrated by Lambda functions to process tagging jobs from an SQS queue.
+
+<img width="1089" alt="image" src="automation/map-tagger-architecture-final.png">
+
+#### Deployment Steps
+
+##### 1. Deploy MAP Tagger Infrastructure
+
+1. Download CloudFormation template ([cloudformation.map-tagger.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.map-tagger.yaml))
+
+2. Sign in to the AWS Management Console and navigate to CloudFormation
+
+3. Create a new stack and upload the template
+
+4. Configure the following parameters:
+
+   **Network Configuration:**
+   - **VpcId**: Select the VPC where ECS tasks will run
+   - **SubnetIds**: Select subnets for ECS tasks (recommend private subnets with NAT gateway)
+
+   **Source Code:**
+   - **GitHubRepo**: GitHub repository URL (default: https://github.com/aws-samples/sample-tagger)
+   - **DockerfilePath**: Path to Dockerfile (default: automation/Dockerfile)
+
+   **Tagging Configuration:**
+   - **Accounts**: Comma-separated list of AWS account IDs to tag (e.g., 123456789012,987654321098)
+   - **Regions**: Comma-separated list of AWS regions (default: us-east-1)
+   - **StartDate**: Only tag resources created after this date (YYYY-MM-DD format)
+   - **MapTagKey**: Tag key to apply (default: map-migrated)
+   - **MapTagValue**: Tag value to apply (e.g., mig12345)
+   - **Services**: Comma-separated list of AWS services to tag. Follow naming convention in modules/* (e.g apigateway,dynamodb,ec2) (leave empty for all supported services)
+
+   **Scheduling (Optional):**
+   - **ScheduleExpression**: EventBridge schedule expression (e.g., rate(1 day) or cron(0 2 * * ? *))
+   - **EnableSchedule**: Set to "true" to enable automatic scheduled execution (default: false)
+
+5. Review and create the stack
+
+6. Wait for stack creation to complete (approximately 10-15 minutes)
+
+7. Navigate to the "Outputs" tab and note the **ECSIAMRoleArn** value - you'll need this for the next step
+
+##### 2. Deploy Cross-Account IAM Roles
+
+To enable the MAP Tagger to access resources in multiple AWS accounts, deploy the IAM role as a StackSet:
+
+1. Download CloudFormation template ([cloudformation.iam.role.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.iam.role.yaml))
+
+2. Navigate to CloudFormation → StackSets
+
+3. Click "Create StackSet" and select "Service-managed permissions"
+
+4. Upload the cloudformation.iam.role.yaml template
+
+5. In the "RoleARN" parameter, enter the **ECSIAMRoleArn** value from the MAP Tagger stack outputs (from step 1.7)
+
+6. Deploy to target accounts:
+   - Select "Deploy new stacks"
+   - Choose deployment targets (organizational units or specific accounts)
+   - Select **only one region** (IAM is global, multiple regions will cause errors)
+   - Set "Failure tolerance" to 1
+
+7. Review and submit
+
+#### Running the Automation
+
+**Manual Execution:**
+- Navigate to Lambda in the AWS Console
+- Find the "map-tagger-orchestrator" function
+- Click "Test" to trigger a tagging job
+
+**Scheduled Execution:**
+- If you enabled the schedule during deployment, the orchestrator will run automatically
+- To enable/disable: Update the stack and change the "EnableSchedule" parameter
+- To modify schedule: Update the "ScheduleExpression" parameter
+
+#### How It Works
+
+1. Lambda orchestrator creates tagging jobs for each account/region/service combination
+2. Jobs are queued in SQS
+3. ECS Fargate tasks are launched to process the queue
+4. Each task assumes a cross-account role and tags resources
+5. Tasks automatically scale based on queue depth
+6. Results are logged to CloudWatch Logs
+
+
+
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
