@@ -13,7 +13,7 @@ Parameters:
   GitHubRepo:
     Type: String
     Description: GitHub repository URL for MAP tagger source code
-    Default: "https://github.com/aws-samples/sample-tagger"
+    Default: "https://github.com/aws-samples/sample-tagger.git"
   
   # Required parameters for Lambda configuration
   Accounts:
@@ -49,6 +49,19 @@ Parameters:
     Type: String
     Description: Path to Dockerfile relative to repository root
     Default: "automation/Dockerfile"
+  
+  ScheduleExpression:
+    Type: String
+    Description: Schedule expression for EventBridge (e.g., 'rate(1 day)' or 'cron(0 2 * * ? *)')
+    Default: "rate(1 day)"
+  
+  EnableSchedule:
+    Type: String
+    Description: Enable or disable the EventBridge schedule
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
 
 Resources:
   # ECR Repository
@@ -233,7 +246,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: map-tagger-queue
-      VisibilityTimeoutSeconds: 900  # 15 minutes
+      VisibilityTimeout: 900  # 15 minutes
       MessageRetentionPeriod: 1209600  # 14 days
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -304,7 +317,7 @@ Resources:
     Properties:
       FunctionName: map-tagger-orchestrator
       Runtime: python3.9
-      Handler: lambda_orchestrator.lambda_handler
+      Handler: index.lambda_handler
       Code:
         ZipFile: |
           import json
@@ -513,6 +526,44 @@ Resources:
                   - !GetAtt TaskExecutionRole.Arn
                   - !GetAtt TaskRole.Arn
 
+  # EventBridge Scheduler Role
+  SchedulerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !GetAtt OrchestratorFunction.Arn
+
+  # EventBridge Schedule
+  OrchestratorSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: map-tagger-orchestrator-schedule
+      Description: Scheduled execution of MAP tagger orchestrator
+      ScheduleExpression: !Ref ScheduleExpression
+      State: !If [IsScheduleEnabled, "ENABLED", "DISABLED"]
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: !GetAtt OrchestratorFunction.Arn
+        RoleArn: !GetAtt SchedulerExecutionRole.Arn
+
+Conditions:
+  IsScheduleEnabled: !Equals [!Ref EnableSchedule, "true"]
+
 Outputs:
   QueueURL:
     Description: SQS Queue URL
@@ -531,3 +582,17 @@ Outputs:
     Value: !Ref ECSCluster
     Export:
       Name: !Sub "${AWS::StackName}-ECSCluster"
+    
+  ECSIAMRoleArn:
+    Description: ECS IAM Role ARN
+    Value: !GetAtt TaskRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSRole"
+  
+  ScheduleName:
+    Description: EventBridge Schedule Name
+    Value: !Ref OrchestratorSchedule
+  
+  ScheduleState:
+    Description: EventBridge Schedule State
+    Value: !If [IsScheduleEnabled, "ENABLED", "DISABLED"]
