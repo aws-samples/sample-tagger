@@ -337,7 +337,7 @@ The MAP Tagger automation solution provides a scalable, serverless approach to a
    - **StartDate**: Only tag resources created after this date (YYYY-MM-DD format)
    - **MapTagKey**: Tag key to apply (default: map-migrated)
    - **MapTagValue**: Tag value to apply (e.g., mig12345)
-   - **Services**: Comma-separated list of AWS services to tag (leave empty for all supported services)
+   - **Services**: Comma-separated list of AWS services to tag. Follow naming convention in modules/* (e.g apigateway, dynamodb, ec2) (leave empty for all supported services)
 
    **Scheduling (Optional):**
    - **ScheduleExpression**: EventBridge schedule expression (e.g., rate(1 day) or cron(0 2 * * ? *))
