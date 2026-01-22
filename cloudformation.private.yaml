@@ -171,7 +171,8 @@ Resources:
                               "dsql:TagResource",
                               "dsql:GetCluster",
                               "dsql:GetVpcEndpointServiceName",
-                              "dsql:ListTagsForResource"
+                              "dsql:ListTagsForResource",
+                              "dsql:GetClusterPolicy"
                           ],
                           "Resource": "*"
                       },
