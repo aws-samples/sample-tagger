@@ -1,0 +1,7 @@
+{
+  "REGION": "us-east-1",
+  "IAM_ROOT_ROLE": "IAMRootRoleTaggerSolution",
+  "IAM_CHILD_ROLE": "IAMChildRoleTaggerSolution",
+  "MAX_WORKERS": 10,
+  "DB_PATH": "../dbstore/tagger.db"
+}

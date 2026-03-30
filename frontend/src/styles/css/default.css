@@ -19,3 +19,34 @@
   background-color: #fafafa;
   color: black;
 }
+
+/* Custom orange button styling for AWS console-style buttons */
+.custom-orange-button button {
+  background-color: #FF9900 !important;
+  border-color: #FF9900 !important;
+  color: #232F3E !important;
+  font-weight: 700 !important;
+  border-radius: 20px !important;
+  padding: 5px 24px !important;
+}
+
+.custom-orange-button button:not(:disabled) {
+  background-color: #FF9900 !important;
+  border-color: #FF9900 !important;
+  color: #232F3E !important;
+}
+
+.custom-orange-button button:hover:not(:disabled) {
+  background-color: #FFB84D !important;
+  border-color: #FFB84D !important;
+}
+
+.custom-orange-button button:active:not(:disabled) {
+  background-color: #E88B00 !important;
+  border-color: #E88B00 !important;
+}
+
+.custom-orange-button button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}

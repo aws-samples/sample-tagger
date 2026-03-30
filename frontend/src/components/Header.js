@@ -1,8 +1,13 @@
-import { Authenticator } from "@aws-amplify/ui-react";
 import { applyMode, Mode } from '@cloudscape-design/global-styles';
 import { configuration } from '../pages/Configs';
 
-import TopNavigation from '@cloudscape-design/components/top-navigation';
+//--## CloudScape components
+import {
+        TopNavigation,
+        Header,        
+} from '@cloudscape-design/components';
+
+
 
 const i18nStrings = {
   searchIconAriaLabel: 'Search',
@@ -13,8 +18,7 @@ const i18nStrings = {
   overflowMenuDismissIconAriaLabel: 'Close menu',
 };
 
-const profileActions = [
-      { type: 'button', id: 'profile', text: 'AppVersion : ' + configuration["apps-settings"]["release"]},
+const profileActions = [      
       {
         type: 'menu-dropdown',
         id: 'preferences',
@@ -29,9 +33,8 @@ const profileActions = [
         id: 'support-group',
         text: 'Support',
         items: [
-          {id: 'documentation',text: 'Documentation'},
-          { id: 'feedback', text: 'Feedback' },
-          { id: 'support', text: 'Customer support' },
+          {id: 'documentation',text: 'Documentation'},          
+          {id: 'version',text: 'Version (' + configuration["apps-settings"]?.["release"] + ')' || '-' },          
         ],
       }
 ];
@@ -59,57 +62,26 @@ export default function App() {
 
     };
     
-    
-
   return (
-         
-         <Authenticator>
-          {({ signOut, user }) => (
-              
-            <>
-    
-                    <div id="h" style={{ position: 'sticky', top: 0, zIndex: 1002 }}>
-                          <TopNavigation
-                                  i18nStrings={i18nStrings}
-                                  identity={{
-                                    href: '/',
-                                    title:  configuration['apps-settings']['application-title'] 
-                                  }}
-                                  utilities={[
-                                    {
-                                      type: 'button',
-                                      iconName: 'notification',
-                                      ariaLabel: 'Notifications',
-                                      badge: true,
-                                      disableUtilityCollapse: true,
-                                    },
-                                    { type: 'button', iconName: 'settings', title: 'Settings', ariaLabel: 'Settings' },
-                                    {
-                                      type: 'menu-dropdown',
-                                      text:  user.signInUserSession.idToken.payload.email  /*"myuser@example.com"*/,
-                                      iconName: 'user-profile',
-                                      items: profileActions,
-                                      onItemClick : handleClickMenu
-                                    },
-                                    {
-                                      type: 'button',
-                                      text: 'Sign out',
-                                      onClick : signOut,
-                                      variant : "primary-button"
-                                    },
-                                  ]}
-                          />
-                      </div>
-                    
-                      
-      
-          </>
-    
-    )}
-    </Authenticator>
-    
-    
-    
+    <div id="h" style={{ position: 'sticky', top: 0, zIndex: 1002 }}>
+      <TopNavigation
+        i18nStrings={i18nStrings}
+        identity={{
+          href: '/',
+          title:  (<Header variant="h1">{configuration['apps-settings']['application-title'] }</Header>)
+        }}
+        utilities={[          
+          { type: 'button', iconName: 'settings', title: 'Settings', ariaLabel: 'Settings', href : "/profiles/" },
+          {
+            type: 'menu-dropdown',
+            text: 'IAM User',
+            iconName: 'user-profile',
+            items: profileActions,
+            onItemClick : handleClickMenu
+          }
+        ]}
+      />
+    </div>
   );
 }
 

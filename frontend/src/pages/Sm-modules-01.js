@@ -1,61 +1,72 @@
 import {useState,useEffect,useRef} from 'react'
-import { configuration, SideMainLayoutHeader,SideMainLayoutMenu, breadCrumbs } from './Configs';
 
+//--## CloudScape components
 import {
-AppLayout,
-SideNavigation,
-Flashbar,
-SpaceBetween,
-Button,
-Header,
-Box,
-Container,
-FormField,
-Select,
-Input,
-Modal,
-ButtonDropdown,
-Link
+        AppLayout,
+        SideNavigation,
+        ContentLayout,
+        Flashbar,
+        SpaceBetween,
+        Button,
+        Header,
+        Box,
+        Container,
+        FormField,
+        Select,
+        Input,
+        Modal,
+        ButtonDropdown,
+        Link
 } from '@cloudscape-design/components';
 
-import '@aws-amplify/ui-react/styles.css';
 
+//--## Functions
+import { configuration, SideMainLayoutHeader,SideMainLayoutMenu, breadCrumbs } from './Configs';
+
+
+//--## Custom components
 import CodeEditor01  from '../components/CodeEditor01';
 import CustomHeader from "../components/Header";
 
+
+
+//--## Main function
 function Application() {
 
     //-- Application messages
     const [applicationMessage, setApplicationMessage] = useState([]);
+    const [navigationOpen, setNavigationOpen] = useState(false);
    
+
+
     //-- Modules
     const [moduleName, setModuleName] = useState("");
     var currentModuleName = useRef("");    
     var currentModuleId = useRef("");        
     var currentModuleContent = useRef("");  
     var beforeModuleContent = useRef("");  
-
-        
+    
     const [selectedModule,setSelectedModule] = useState({});
     const [moduleDataset,setModuleDataset] = useState([]); 
     const [moduleContent,setModuleContent] = useState("");      
     const [editorEventUid, setEditorEventUid] = useState(0); 
-
 
     const [visibleCreateModule, setVisibleCreateModule] = useState(false);
     const [visibleDeleteModule, setVisibleDeleteModule] = useState(false);
     const [visibleEditModule, setVisibleEditModule] = useState(false);
 
 
+
+
     //--## Create API object
     function createApiObject(object){
         const xhr = new XMLHttpRequest();
         xhr.open(object.method,`${configuration["apps-settings"]["api-url"]}`,object.async);
-        xhr.setRequestHeader("Authorization",`Bearer ${sessionStorage.getItem("x-token-cognito-authorization")}`);
         xhr.setRequestHeader("Content-Type","application/json");            
         return xhr;
     }
 
+    
 
 
     //--## Gather Modules
@@ -63,7 +74,7 @@ function Application() {
       try {
             
             var parameters = {                         
-                            processId : "17-get-list-modules"
+                            processId : 'modules::api-301-get-list-modules'
             };        
     
             const api = createApiObject({ method : 'POST', async : true });          
@@ -124,12 +135,14 @@ function Application() {
     };
 
 
+
+
     //--## Get file content
     async function getFileContent(fileName){
       try {
             
             var parameters = {                         
-                            processId : "18-get-module-content",
+                            processId : 'modules::api-302-get-module-content',
                             fileName : fileName
             };        
             
@@ -153,6 +166,8 @@ function Application() {
             console.log('Timeout API error - PID: 18-get-file-content');                  
       }
     };
+  
+
 
 
     //--## Update Module
@@ -160,7 +175,7 @@ function Application() {
       try {
             
             var parameters = {                         
-                            processId : "19-save-module-content",
+                            processId : 'modules::api-303-save-module-content',
                             fileName : fileName,
                             content : content
             };        
@@ -198,12 +213,14 @@ function Application() {
     };
 
 
+
+
     //--## Delete Module
     async function handleClickDeleteModule(){
       try {
             
             var parameters = {                         
-                            processId : "20-delete-module-content",
+                            processId : 'modules::api-304-delete-module-content',
                             fileName : currentModuleId.current,
             };        
     
@@ -224,6 +241,8 @@ function Application() {
 
 
 
+
+
      //--## Sync modules
      async function syncModules(){
       try {
@@ -240,7 +259,7 @@ function Application() {
             ]);
 
             var parameters = {                         
-                            processId : "25-sync-modules-from-repo"
+                            processId : 'modules::api-306-sync-modules-from-repo'
             };        
             
             const api = createApiObject({ method : 'POST', async : true });          
@@ -286,6 +305,9 @@ function Application() {
     }
 
     
+
+
+
     //--## Initialization
     // eslint-disable-next-line
     useEffect(() => {
@@ -293,169 +315,149 @@ function Application() {
     }, []);
     
     
+    
+    
+  //--## Rendering
   return (
     <div style={{"background-color": "#f2f3f3"}}>
         <CustomHeader/>
         <AppLayout            
             breadCrumbs={breadCrumbs}
             navigation={<SideNavigation items={SideMainLayoutMenu} header={SideMainLayoutHeader} activeHref={"/modules/"} />}
+            navigationOpen={navigationOpen}
+            onNavigationChange={({ detail }) => setNavigationOpen(detail.open)}
             disableContentPaddings={true}
             contentType="dashboard"
             toolsHide={true}
             content={
-                      <div style={{"padding" : "1em"}}>
+                      <ContentLayout
+                          defaultPadding
+                          header={
+                              <Header variant="h1" description="Create, edit, and manage AWS service modules that define how resources are discovered and tagged across your environment.">
+                                  Module Management  
+                              </Header>
+                          }
+                      >
                           <Flashbar items={applicationMessage} />
                           <br/>
-                          <Header variant="h1" description="Manage modules used by tagging and search process.">
-                              Module Management  
-                          </Header>
+                          <Container
+                            header={
+                              <Header
+                                variant="h2"
+                                description="Select an AWS service module to view or edit its discovery and tagging implementation."
+                                actions={
+                                  <SpaceBetween direction="horizontal" size="xs">
+                                    { !visibleEditModule ? (
+                                      <>
+                                        <Button onClick={syncModules}>
+                                          Synchronize
+                                        </Button>  
+                                        <Button external={false}                                                        
+                                                iconAlign="right"
+                                                iconName="external"
+                                                target="_blank"
+                                                href={"/modules/validation?mtid=" + currentModuleId.current}
+                                        >
+                                          Validate
+                                        </Button>  
+                                        <ButtonDropdown
+                                          variant={"primary"}
+                                          items={[
+                                            { text: "Create", id: "create"},
+                                            { text: "Edit", id: "edit"},
+                                            { text: "Delete", id: "delete" }
+                                          ]}
+                                          onItemClick={( item ) => { 
+                                              switch(item.detail.id){
+                                                  case "create":
+                                                    setVisibleCreateModule(true);
+                                                    setModuleName("");                                                          
+                                                    break;
+                                                  case "edit":
+                                                    beforeModuleContent.current = currentModuleContent.current;
+                                                    setVisibleEditModule(true);
+                                                    break;
+                                                  case "delete":
+                                                    setVisibleDeleteModule(true);
+                                                    break;                                                          
+                                              }
+                                          }}
+                                        >
+                                          Action
+                                        </ButtonDropdown>
+                                        <Button 
+                                              iconName="refresh" 
+                                              onClick={() => { 
+                                                gatherModules(null);
+                                              }}>
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Button variant="link"  
+                                            onClick={() => { 
+                                                currentModuleContent.current = beforeModuleContent.current;                                                                        
+                                                setVisibleEditModule(false);                                                                                 
+                                                setEditorEventUid(prevEventUid => prevEventUid + 1);                                                          
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button variant="primary" 
+                                            onClick={() => {                       
+                                                handleClickSaveModule(currentModuleId.current, currentModuleContent.current);            
+                                                setVisibleEditModule(false);                                                                  
+                                            }}
+                                        >
+                                            Save
+                                        </Button>
+                                      </>
+                                    )}
+                                  </SpaceBetween>
+                                }
+                              >
+                                Module
+                              </Header>
+                            }
+                          >
+                            <FormField label={"Module"}>
+                                <Select
+                                          disabled={visibleEditModule}
+                                          selectedOption={selectedModule}
+                                          onChange={({ detail }) => {
+                                            currentModuleId.current = detail.selectedOption['value'];
+                                            currentModuleName.current = detail.selectedOption['label'];
+                                            setSelectedModule(detail.selectedOption);         
+                                            getFileContent(detail.selectedOption['label']);                                                                                                
+                                          }}
+                                          options={moduleDataset}
+                                          filteringType="auto"
+                                          triggerVariant="option"
+                                />
+                            </FormField>
+                          </Container>
                           <br/>
-                          <Container>
-                            <table style={{"width":"100%"}}>
-                                <tr>  
-                                    <td valign="middle" style={{"width":"35%", "padding-right": "2em", "text-align": "center"}}>  
-                                      <FormField label={"Module"}>
-                                          <Select
-                                                    disabled={visibleEditModule}
-                                                    selectedOption={selectedModule}
-                                                    onChange={({ detail }) => {
-                                                      currentModuleId.current = detail.selectedOption['value'];
-                                                      currentModuleName.current = detail.selectedOption['label'];
-                                                      setSelectedModule(detail.selectedOption);         
-                                                      getFileContent(detail.selectedOption['label']);                                                                                                
-                                                    }}
-                                                    options={moduleDataset}
-                                                    filteringType="auto"
-                                                    triggerVariant="option"
-                                          />
-                                      </FormField>
-                                    </td>
-                                    <td valign="middle" style={{"width":"20%", "padding-right": "2em", "text-align": "center"}}>  
-                                          
-                                    </td>
-                                    <td valign="middle" style={{"width":"45%", "padding-right": "2em", "text-align": "center"}}>  
-                                            <Box float="right">
-                                              <SpaceBetween direction="horizontal" size="xs">
-                                                
-                                              <Button 
-                                                    iconName="refresh" 
-                                                    disabled={visibleEditModule}
-                                                    onClick={() => { 
-                                                      gatherModules(null);
-                                                    }}>
-
-                                                </Button>
-                                                <Button                                                        
-                                                  onClick={syncModules}
-                                                  disabled={visibleEditModule}
-                                                >
-                                                  Synchronize
-                                                </Button>  
-                                                <Button external={false}                                                        
-                                                        iconAlign="right"
-                                                        iconName="external"
-                                                        target="_blank"
-                                                        href={"/modules/validation?mtid=" + currentModuleId.current}       
-                                                        disabled={visibleEditModule}                                                 
-                                                >
-                                                  Validate
-                                                </Button>  
-                                                <ButtonDropdown
-                                                  disabled={visibleEditModule}
-                                                  variant={"primary"}
-                                                  items={[
-                                                    { text: "Create", id: "create"},
-                                                    { text: "Edit", id: "edit"},
-                                                    { text: "Delete", id: "delete" }
-                                                  ]}
-                                                  onItemClick={( item ) => { 
-
-                                                      switch(item.detail.id){
-                                                          case "create":
-                                                            setVisibleCreateModule(true);
-                                                            setModuleName("");                                                          
-                                                            break;
-                                                          
-                                                          case "edit":
-                                                            beforeModuleContent.current = currentModuleContent.current;
-                                                            setVisibleEditModule(true);
-                                                            break;
-                                                          
-                                                          case "delete":
-                                                            setVisibleDeleteModule(true);
-                                                            break;                                                          
-                                                          
-                                                      }
-                                                        
-                                                    }
-                                                  }
-                                                >
-                                                  Action
-                                                </ButtonDropdown>
-                                                                                         
-                                                
-                                              </SpaceBetween>
-
-                                            </Box>
-                                    </td>
-                                </tr>
-                            </table>                                 
-                            <br/>    
-                            <table style={{"width":"100%"}}>
-                                <tr>  
-                                    <td valign="middle" style={{"width":"50%", "padding-right": "2em", "text-align": "center"}}>  
-                                            
+                          <Container
+                            header={
+                              <Header
+                                variant="h2"
+                                description="Python source code that implements resource discovery and tagging logic for the selected AWS service."
+                              >
+                                Module editor
+                              </Header>
+                            }
+                          >
                                             <CodeEditor01
                                                     key={editorEventUid}
                                                     format={"python"}
                                                     value={currentModuleContent.current}
                                                     readOnly={!visibleEditModule}
                                                     height={750}
-                                                    header={
-                                                              <Header
-                                                                variant="h4"
-                                                              >
-                                                                Module editor
-                                                              </Header>
-                                                            }
                                                       onChange={ ( item ) => { currentModuleContent.current = item; } }
                                             />
-                                                  { visibleEditModule &&
-                                                  <div>
-                                                      <br/>
-                                                      <Box float="right">
-                                                        <SpaceBetween direction="horizontal" size="xs">
-                                                            <Button variant="link"  
-                                                                      onClick={() => { 
-                                                                        currentModuleContent.current = beforeModuleContent.current;                                                                        
-                                                                        setVisibleEditModule(false);                                                                                 
-                                                                        setEditorEventUid(prevEventUid => prevEventUid + 1);                                                          
-                                                                        }}
-                                                              >
-                                                                  Cancel
-                                                              </Button>
-                                                              <Button variant="primary" 
-                                                                  onClick={() => {                       
-                                                                                  handleClickSaveModule(currentModuleId.current, currentModuleContent.current);            
-                                                                                  setVisibleEditModule(false);                                                                  
-                                                                              }}
-                                                              >
-                                                                Save
-                                                              </Button>
-                                                        </SpaceBetween>
-                                                      </Box>
-                                                  </div>
-
-                                                  }
-                                                
-
-                                      </td>
-                                </tr>
-                                
-                            </table>
                           </Container>
                           
-                  </div>
+                      </ContentLayout>
                 
             }
           />

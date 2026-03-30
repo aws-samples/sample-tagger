@@ -1,0 +1,15 @@
+/* TokenOverride.css */
+/* Target dismiss button in tokens more specifically */
+[data-awsui-token-dismiss-button],
+.awsui-token-dismiss,
+.awsui-token__dismiss,
+[class*="token-dismiss"],
+[class*="token__dismiss"] {
+  display: none !important;
+}
+
+/* Also ensure any container that wraps dismiss buttons is adjusted */
+[class*="token-content"],
+[class*="token__content"] {
+  padding-right: 0.5rem !important;
+}

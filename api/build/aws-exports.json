@@ -1,0 +1,7 @@
+{
+  "aws_api_port": 3000,
+  "aws_region": "us-east-1",
+  "aws_cognito_user_pool_id": "us-east-1_qdpWySX13",
+  "aws_cognito_user_pool_web_client_id": "2ci6p3qar1gplum20g6iedeacq",
+  "aws_api_management": "http://localhost:3000"
+}

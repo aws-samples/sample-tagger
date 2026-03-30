@@ -24,17 +24,9 @@ export const configuration =
 };
 
 
-export const SideMainLayoutHeader = { text: 'Resource Groups', href: '/' };
+export const SideMainLayoutHeader = { text: 'Home', href: '/' };
 
-export const SideMainLayoutMenu = [
-    {
-      text: 'Metadata',
-      type: 'section',
-      defaultExpanded: true,
-      items: [
-          { type: "link", text: "Metadata Bases", href: "/metadata/bases/" },                    
-      ],
-    },
+export const SideMainLayoutMenu = [    
     {
         text: 'Tagging',
         type: 'section',
@@ -47,11 +39,20 @@ export const SideMainLayoutMenu = [
       },
     { type: "divider" },
     {
+      text: 'Inventory',
+      type: 'section',
+      defaultExpanded: true,
+      items: [
+          { type: "link", text: "Metadata Bases", href: "/metadata/bases/" },                    
+      ],
+    },
+    { type: "divider" },    
+    {
         text: 'Management',
         type: 'section',
         defaultExpanded: true,
         items: [
-            { type: "link", text: "Profile", href: "/profiles/" },  
+            { type: "link", text: "Profiles", href: "/profiles/" },  
             { type: "link", text: "Modules", href: "/modules/" },      
         ],
       },
