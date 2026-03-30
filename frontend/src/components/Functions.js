@@ -104,6 +104,32 @@ export function customFormatDateDifference(startDate, endDate) {
         else 
             return "";
 }
+
+
+//-- Calculate duration between two timestamps in format "Xm Ys"
+export function calculateDuration(startTime, endTime) {
+    if (!startTime || !endTime) return '-';
+    
+    try {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const diffMs = end - start;
+        
+        if (diffMs < 0) return '-';
+        
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const minutes = Math.floor(diffSeconds / 60);
+        const seconds = diffSeconds % 60;
+        
+        if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    } catch (error) {
+        return '-';
+    }
+}
     
 
 export function customFormatDateMS(startDate, endDate) {

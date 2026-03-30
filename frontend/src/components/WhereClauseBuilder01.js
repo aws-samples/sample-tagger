@@ -34,8 +34,19 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
   // Track previous value to detect changes
   const prevValueRef = useRef(value);
   
-  // Initialize conditions state
-  const [conditions, setConditions] = useState([]);
+  // Initialize conditions state from value prop
+  const [conditions, setConditions] = useState(() => {
+    const parsed = parseWhereClause(value);
+    if (parsed.length > 0) {
+      return parsed.map((condition, index) => ({
+        ...condition,
+        id: `init-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`,
+        key: condition.key || '',
+        value: condition.value || ''
+      }));
+    }
+    return [];
+  });
   
   // Debug function to log condition state
   const logConditions = (message, conditionsToLog) => {
@@ -61,16 +72,19 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
         // Fix the IDs by assigning new unique IDs to each condition
         const fixedConditions = parsedConditions.map((condition, index) => ({
           ...condition,
-          id: `fixed-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+          id: `fixed-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`,
+          key: condition.key || '',  // Ensure key exists
+          value: condition.value || ''  // Ensure value exists
         }));
         
         setConditions(fixedConditions);
       } else if (!readOnly) {
         // Add a default condition if none exist and not in read-only mode
         setConditions([{
-          id: `default-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `default-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           field: 'creation_date',
           operation: '>',
+          key: '',
           value: '',
           connector: 'AND'
         }]);
@@ -84,9 +98,10 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
   useEffect(() => {
     if (conditions.length === 0 && !value && !readOnly) {
       setConditions([{
-        id: `default-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `default-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         field: 'creation_date',
         operation: '>',
+        key: '',
         value: '',
         connector: 'AND'
       }]);
@@ -99,9 +114,10 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
       const newConditions = [
         ...prevConditions,
         {
-          id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           field: 'creation_date',
           operation: '>',
+          key: '',
           value: '',
           connector: 'AND'
         }
@@ -122,9 +138,6 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
   // Remove condition
   const removeCondition = useCallback((id) => {
     setConditions(prevConditions => {
-      // Don't allow removing the last condition
-      if (prevConditions.length <= 1) return prevConditions;
-      
       const newConditions = prevConditions.filter(condition => condition.id !== id);
       
       // Mark that this change came from inside the component
@@ -155,8 +168,24 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
           
           // Special handling for field changes
           if (property === 'field') {
-            updatedCondition.operation = newValue === 'creation_date' ? '>' : 'EXISTS';
-            updatedCondition.value = '';
+            if (newValue === 'creation_date') {
+              updatedCondition.operation = '>';
+              updatedCondition.key = '';
+              updatedCondition.value = '';
+            } else {
+              // For tags/metadata, default to KEY_EXISTS
+              updatedCondition.operation = 'KEY_EXISTS';
+              updatedCondition.key = '';
+              updatedCondition.value = '';
+            }
+          }
+          
+          // Special handling for operation changes on tags/metadata
+          if (property === 'operation' && (condition.field === 'tags' || condition.field === 'metadata')) {
+            // Clear value if switching to KEY_EXISTS or KEY_NOT_EXISTS
+            if (newValue === 'KEY_EXISTS' || newValue === 'KEY_NOT_EXISTS') {
+              updatedCondition.value = '';
+            }
           }
           
           //console.log(`Updated condition ${id}:`, updatedCondition);
@@ -193,14 +222,16 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
         {/* Headers for columns */}
         <Grid gridDefinition={[
           { colspan: 2 },
-          { colspan: 3 },
-          { colspan: 3 },
+          { colspan: 2 },
+          { colspan: 2 },
+          { colspan: 2 },
           { colspan: 3 },
           { colspan: 1 }
         ]}>
           <div></div>
           <Box fontWeight="bold">Field</Box>
           <Box fontWeight="bold">Operation</Box>
+          <Box fontWeight="bold">Key</Box>
           <Box fontWeight="bold">Value</Box>
           <div></div>
         </Grid>
@@ -210,8 +241,9 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
             key={condition.id}
             gridDefinition={[
               { colspan: 2 },
-              { colspan: 3 },
-              { colspan: 3 },
+              { colspan: 2 },
+              { colspan: 2 },
+              { colspan: 2 },
               { colspan: 3 },
               { colspan: 1 }
             ]}
@@ -255,14 +287,36 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
               />
             </FormField>
             
+            {/* Key input - only for tags/metadata */}
+            {(condition.field === 'tags' || condition.field === 'metadata') ? (
+              <FormField label="">
+                <Input
+                  value={condition.key || ''}
+                  onChange={({ detail }) => updateCondition(condition.id, 'key', detail.value)}
+                  placeholder="e.g. map-migrated"
+                  data-testid={`key-input-${index}`}
+                />
+              </FormField>
+            ) : (
+              <div></div> // Empty cell for creation_date
+            )}
+            
             {/* Value input */}
             <FormField label="">
               <Input
                 value={condition.value || ''}
                 onChange={({ detail }) => updateCondition(condition.id, 'value', detail.value)}
-                placeholder={condition.field === 'creation_date' 
-                  ? "e.g. 2023-04-01 18:00" 
-                  : `Enter ${condition.field} value`}
+                placeholder={
+                  condition.field === 'creation_date' 
+                    ? "e.g. 2023-04-01 18:00"
+                    : (condition.operation === 'KEY_EQUALS' || condition.operation === 'KEY_NOT_EQUALS')
+                      ? "e.g. 12345678"
+                      : "Not required"
+                }
+                disabled={
+                  (condition.field === 'tags' || condition.field === 'metadata') &&
+                  (condition.operation === 'KEY_EXISTS' || condition.operation === 'KEY_NOT_EXISTS')
+                }
                 data-testid={`value-input-${index}`}
               />
             </FormField>
@@ -272,7 +326,6 @@ const WhereClauseBuilder = React.memo(({ onChange, value = '', readOnly = false 
               iconName="remove"
               onClick={() => removeCondition(condition.id)}
               variant="icon"
-              disabled={conditions.length <= 1}
               ariaLabel="Remove condition"
               data-testid={`remove-button-${index}`}
             />

@@ -5,6 +5,7 @@
   "dependencies": {
     "@aws-amplify/ui-react": "^4.6.4",
     "@awsui/components-react": "^3.0.947",
+    "@cloudscape-design/chat-components": "^1.0.104",
     "@cloudscape-design/code-view": "^3.0.28",
     "@cloudscape-design/components": "^3.0.945",
     "@cloudscape-design/design-tokens": "^3.0.27",

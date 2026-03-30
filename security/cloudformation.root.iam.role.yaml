@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Taggr Solution - Root IAM Role for Cross-Account Access - (uksb-kzxy2tzxlf)"
+
+Parameters:
+  PrincipalARN:
+    Type: String
+    Description: IAM ARN of the principal (user or role) allowed to assume this root role
+    AllowedPattern: "arn:aws:iam::\\d{12}:(user|role)/.+"
+    ConstraintDescription: Must be a valid IAM user or role ARN
+
+Resources:
+
+  IAMRootRoleTaggerSolution:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: IAMRootRoleTaggerSolution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref PrincipalARN
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: AssumeChildRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "sts:AssumeRole"
+                Resource: "*"
+
+Outputs:
+  RoleARN:
+    Description: ARN of the root role to be used in child account trust relationships
+    Value: !GetAtt IAMRootRoleTaggerSolution.Arn
+  RoleName:
+    Description: Name of the root role
+    Value: !Ref IAMRootRoleTaggerSolution

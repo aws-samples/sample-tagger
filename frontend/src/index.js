@@ -7,28 +7,26 @@ import {
 
 //-- Libraries
 import '@cloudscape-design/global-styles/index.css';
-import { Amplify } from "aws-amplify";
-import { AmplifyProvider, Authenticator } from "@aws-amplify/ui-react";
+import './styles/css/default.css';
 import { StrictMode } from "react";
-import Axios from "axios";
 
 //-- Pages
-import Authentication from "./pages/Authentication";
 import Home from "./pages/Home";
-import Logout from "./pages/Logout";
 import SmTagger01 from "./pages/Sm-tagger-01";
 import SmTagger02 from "./pages/Sm-tagger-02";
+import SmTagger03 from "./pages/Sm-tagger-03";
 import SmDashboard01 from "./pages/Sm-dashboard-01";
 import SmProfiles01 from "./pages/Sm-profiles-01";
 import SmMetadataBase01 from "./pages/Sm-metadata-base-01";
-import SmMetadataSearch01 from "./pages/Sm-metadata-search-01";
+import SmMetadataBase02 from "./pages/Sm-metadata-base-02";
 import SmModules01 from "./pages/Sm-modules-01";
 import SmModules02 from "./pages/Sm-modules-02";
 import SmCompliance01 from "./pages/Sm-compliance-01";
+import SmCompliance02 from "./pages/Sm-compliance-02";
+import SmTagExplorer01 from "./pages/Sm-TagExplorer-01";
 
 //-- Components
-import ProtectedApp from "./components/ProtectedApp";
-import { AmplifyTheme } from './components/AmplifyTheme';
+import ErrorBoundary from "./components/ErrorBoundary";
 import { applyMode,  Mode } from '@cloudscape-design/global-styles';
 
 if (localStorage.getItem("themeMode") === null ){
@@ -39,52 +37,68 @@ if (localStorage.getItem("themeMode") == "dark")
     applyMode(Mode.Dark);
 else
     applyMode(Mode.Light);
-  
 
+// Comprehensive ResizeObserver error suppression
+// These errors are benign and come from CloudScape components measuring DOM elements
 
-Axios.get(`/aws-exports.json`,).then((data)=>{
-
-    var configData = data.data;
-    Amplify.configure({
-                    Auth: {
-                      region: configData.aws_region,
-                      userPoolId: configData.aws_cognito_user_pool_id,
-                      userPoolWebClientId: configData.aws_cognito_user_pool_web_client_id,
-                    },
-    });
-                  
-    const rootElement = document.getElementById("root");
-    render(
-      <StrictMode>
-        <AmplifyProvider theme={AmplifyTheme}>
-          <Authenticator.Provider>
-              <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<ProtectedApp><Home /> </ProtectedApp>} />
-                    <Route path="/tagger/" element={<ProtectedApp><SmTagger01 /> </ProtectedApp>} />
-                    <Route path="/dashboard/" element={<ProtectedApp><SmDashboard01 /> </ProtectedApp>} />
-                    <Route path="/profiles/" element={<ProtectedApp><SmProfiles01 /> </ProtectedApp>} />
-                    <Route path="/modules/" element={<ProtectedApp><SmModules01 /> </ProtectedApp>} />
-                    <Route path="/modules/validation/" element={<ProtectedApp><SmModules02 /> </ProtectedApp>} />
-                    <Route path="/metadata/bases/" element={<ProtectedApp><SmMetadataBase01 /> </ProtectedApp>} />
-                    <Route path="/metadata/search/" element={<ProtectedApp><SmMetadataSearch01 /> </ProtectedApp>} />                    
-                    <Route path="/compliance/" element={<ProtectedApp><SmCompliance01 /> </ProtectedApp>} />           
-                    <Route path="/remediate/" element={<ProtectedApp><SmTagger02 /> </ProtectedApp>} />         
-                    <Route path="/authentication" element={<Authentication />} />
-                    <Route path="/logout" element={<ProtectedApp><Logout /> </ProtectedApp>} />
-                </Routes>
-              </BrowserRouter>
-          </Authenticator.Provider>
-        </AmplifyProvider>
-      </StrictMode>,
-      rootElement
-    );
-
-})
-.catch((err) => {
-    console.log('API Call error : ./aws-exports.json' );
-    console.log(err)
+// Method 1: Suppress at window.error level
+window.addEventListener('error', (e) => {
+  if (e.message && (
+      e.message.includes('ResizeObserver') ||
+      e.message.includes('ResizeObserver loop') ||
+      e.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+      e.message === 'ResizeObserver loop limit exceeded'
+  )) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    return false;
+  }
 });
+
+// Method 2: Suppress at unhandledrejection level
+window.addEventListener('unhandledrejection', (e) => {
+  if (e.reason && e.reason.message && e.reason.message.includes('ResizeObserver')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// Method 3: Override console.error to filter ResizeObserver errors
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const errorMessage = args[0]?.toString() || '';
+  if (errorMessage.includes('ResizeObserver')) {
+    // Silently ignore ResizeObserver errors
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
+
+const rootElement = document.getElementById("root");
+render(
+  <StrictMode>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/tagger/" element={<SmTagger01 />} />
+            <Route path="/tagger/process/" element={<SmTagger03 />} />
+            <Route path="/dashboard/" element={<SmDashboard01 />} />
+            <Route path="/profiles/" element={<SmProfiles01 />} />
+            <Route path="/modules/" element={<SmModules01 />} />
+            <Route path="/modules/validation/" element={<SmModules02 />} />
+            <Route path="/metadata/bases/" element={<SmMetadataBase01 />} />
+            <Route path="/metadata/process/" element={<SmMetadataBase02 />} />            
+            <Route path="/metadata/explorer/" element={<SmTagExplorer01 />} />
+            <Route path="/compliance/" element={<SmCompliance01 />} />
+            <Route path="/compliance/process/" element={<SmCompliance02 />} />           
+            <Route path="/remediate/" element={<SmTagger02 />} />         
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
+  </StrictMode>,
+  rootElement
+);
               
               
 
