@@ -84,6 +84,10 @@ if (Test-Path $requirementsPath) {
     Write-Host "  [i] Installing packages from requirements.txt..." -ForegroundColor Yellow
     pip install --upgrade pip -q
     pip install -r $requirementsPath -q
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [x] Failed to install dependencies. Check errors above." -ForegroundColor Red
+        exit 1
+    }
     Write-Host "  [ok] Dependencies installed successfully" -ForegroundColor Green
 } else {
     Write-Host "  [x] requirements.txt not found!" -ForegroundColor Red

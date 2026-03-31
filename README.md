@@ -44,9 +44,9 @@ This separation provides least-privilege access: the root role can only assume o
 
 ### Prerequisites
 
-- AWS CLI installed and configured with valid credentials
-- Python 3.11+
-- Node.js 18+ and npm
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured with valid credentials
+- Python 3.11+ ([Windows installer](https://www.python.org/ftp/python/3.11.0/python-3.11.0b2-amd64.exe))
+
 
 ### Step 1: Clone the Repository
 
