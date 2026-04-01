@@ -1,400 +1,303 @@
-# Taggr Solution for AWS Services
+# MAP Resource Discovery & Tagging Engine
 
-> **Disclaimer:** This solution is AWS Content, as defined in the [Online Customer Agreement](https://aws.amazon.com/agreement/). You are responsible for testing, securing, and optimizing the AWS Content, such as sample code, as appropriate for production grade use based on your specific quality control practices and standards. Deploying AWS Content may incur AWS charges for creating or using AWS chargeable resources, such as running Amazon App Runner, using Cognito, API Gateway, Aurora DSQL, Lambda, S3.
-
-> To measure the performance of this solution, and to help improve and develop AWS Content, AWS may collect and use anonymous operational metrics related to your use of this AWS Content.  We will not access Your Content, as is defined in the [Online Customer Agreement](https://aws.amazon.com/agreement/). Data collection is subject to the [AWS Privacy Policy](https://aws.amazon.com/privacy/).  You may opt-out of the operational metrics being collected and used by removing the tag(s) starting with "uksb-" or “SO” from the description(s) in any CloudFormation templates or CDK TemplateOptions.
+> **⚠️ Disclaimer:** This is sample code for non-production usage. You should work with your security and legal teams to meet your organizational security, regulatory, and compliance requirements before deployment. You are responsible for testing, securing, and optimizing this solution as appropriate for production use based on your specific quality control practices and standards. Deploying this solution may incur AWS charges for ECS, Lambda, SQS, CodeBuild, ECR, EventBridge, and CloudWatch. Under the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/), you are responsible for security decisions in the cloud, including the IAM roles and policies deployed by this solution.
 
 
-## What is Taggr Solution ?
+## What is MAP Resource Discovery & Tagging Engine?
 
-Taggr Solution a revolutionary application designed to streamline and enhance your AWS metadata management.
-
-This powerful tool automates the tagging process across multiple accounts and regions, providing unprecedented control and visibility over your cloud infrastructure. With its advanced filtering capabilities and comprehensive metadata management,
-
-Taggr Solution empowers organizations to optimize their AWS resources, improve cost allocation, and enhance security compliance effortlessly.
+A boto3-based discovery engine that enumerates ALL existing AWS resources across 82 services and applies MAP 2.0 `map-migrated` tags. It provides a scalable, serverless approach to automatically tag AWS resources across multiple accounts and regions using ECS Fargate tasks orchestrated by Lambda functions.
 
 
+## Key Features
 
-## Key features
-
-- Cross-account and cross-region automated tagging.
-
-- Custom tag filtering for precise resource management.
-
-- Comprehensive metadata search functionality.
-
-- Fully serverless architecture for scalability and cost-efficiency.
+- Cross-account and cross-region automated tagging
+- Supports 82 AWS services out of the box
+- Scalable ECS Fargate workers with SQS-based job distribution
+- Configurable scheduling via EventBridge
+- Date-based filtering to tag only resources created after a specific date
 
 
+## Use Cases
 
-## Use cases
-
-- #### Cost Allocation
-A large enterprise uses Taggr Solution to automatically tag resources across multiple departments, enabling accurate cost attribution and budgeting.
-
-- #### Security Compliance
-A financial services company leverages the application to ensure all resources are properly tagged for regulatory compliance, using custom filters to identify and rectify any non-compliant resources.
-
-- #### Resource Optimization
-A startup uses the metadata search feature to quickly locate underutilized resources across their AWS infrastructure, allowing them to optimize their cloud spend and improve efficiency.
+- **MAP Migration Tracking:** Automatically apply `map-migrated` tags to all existing resources in accounts participating in the AWS Migration Acceleration Program.
+- **Late MAP Enrollment:** Tag resources that were created before MAP enrollment or before CloudTrail's 90-day event history window.
+- **Cost Attribution:** Ensure all resources are properly tagged for accurate cost allocation and migration credit tracking.
+- **Compliance Audit:** Perform a full sweep of untagged resources across multiple accounts and regions.
 
 
+## Architecture
 
-## Architecture and Deployment Options
+![Architecture](automation/map-tagger-architecture-final.png)
 
-### Private Deployment Architecture
+```
+EventBridge Schedule (or manual trigger)
+    → Orchestrator Lambda
+        → Sends 1 SQS message per account/region/service
+            → ECS Fargate tasks (consume from SQS)
+                → Load service module from modules/
+                → Call discovery() to enumerate resources
+                → Tag untagged resources with map-migrated
+```
 
-<img width="1089" alt="image" src="frontend/src/img/architecture-private.png">
+### Components
 
-The Private deployment of the Taggr Solution is designed for organizations requiring enhanced network security and isolation.
-Key Components:
+| File | Description |
+|------|-------------|
+| `cloudformation.map-tagger.yaml` | Main stack — ECS cluster, Lambda orchestrator, SQS queue, CodeBuild (builds Docker image), EventBridge schedule |
+| `cloudformation.iam.role.yaml` | Cross-account IAM role for target accounts (deploy via StackSet) |
+| `automation/lambda_orchestrator.py` | Fans out jobs to SQS — one message per account/region/service combo |
+| `automation/ecs_map_tagger.py` | ECS worker — loads service modules, discovers resources, tags them |
+| `automation/Dockerfile` | Container image — Python 3.9 + boto3 + modules |
+| `modules/*.py` | 82 service-specific discovery and tagging modules |
 
-1.	Network Configuration
-    - Deployed within a dedicated VPC
-    - Uses Private Subnets for resource placement
-    - Includes a Private Endpoint for secure internal access
-    - Security Group controls traffic flow to App Runner service
-
-2.	Frontend Service
-    - AWS App Runner hosts the web application
-    - Access is restricted through VPC Endpoint integration
-    - Not directly exposed to the public internet
-
-3.	Authentication
-    - Amazon Cognito provides secure user authentication
-    - API Gateway integrates with Cognito for authorization
-    - User sessions are securely managed through Cognito tokens
-
-
-4.	Backend Services
-    - API Gateway manages and routes API requests
-    - Lambda functions perform business logic and data processing
-    - Lambda loads required Python libraries from an S3 Bucket
-    - Aurora DSQL database stores application metadata and configuration
-
-5.	Cross-Account Access
-    - IAM Roles enable secure cross-account access
-    - Solution can manage resources across multiple AWS accounts
-    - Principle of least privilege enforced throughout
-
-
-#### Benefits:
-- Enhanced security through network isolation
-- Access restricted to users within the VPC or through VPC endpoints
-- Reduced attack surface by eliminating direct internet exposure
-- Complies with strict network security requirements
-- Suitable for sensitive environments and regulated industries
-
-
-### Public Deployment Architecture
-
-<img width="1089" alt="image" src="frontend/src/img/architecture-public.png">
-
-
-The Public deployment of the Taggr Solution provides easier accessibility while maintaining security controls.
-Key Components:
-
-1.	Network Configuration
-    - Deployed with public accessibility
-    - AWS Web Application Firewall (WAF) protects the application from common web threats
-    - IP-based access controls via CIDR rules in WAF configuration
-
-2.	Frontend Service
-    - AWS App Runner hosts the web application
-    - Directly accessible over the internet through WAF
-    - WAF filters and protects against malicious traffic
-
-3.	Authentication
-    - Amazon Cognito provides secure user authentication
-    - API Gateway integrates with Cognito for authorization
-    - User sessions are securely managed through Cognito tokens
-
-4.	Backend Services
-    - API Gateway manages and routes API requests
-    - Lambda functions perform business logic and data processing
-    - Lambda loads required Python libraries from an S3 Bucket
-    - Aurora DSQL database stores application metadata and configuration
-
-5.	Cross-Account Access
-    - IAM Roles enable secure cross-account access
-    - Solution can manage resources across multiple AWS accounts
-    - Principle of least privilege enforced throughout
-
-#### Benefits:
-- Simplified accessibility from anywhere with internet access
-- Web Application Firewall provides security for internet-facing resources
-- IP filtering capabilities for controlled access
-- Easier onboarding for users outside your corporate network
-- Reduced network infrastructure complexity
-- Suitable for less restrictive environments and broader user bases
-
-
-
-## How looks like ?
-
-
-<img width="1089" alt="image" src="img/img-01.png">
-<img width="1089" alt="image" src="img/img-02.png">
-<img width="1089" alt="image" src="img/img-04.png">
-<img width="1089" alt="image" src="img/img-08.png">
-
- 
 
 ## Solution Deployment
 
-> **Time to deploy:** Approximately 10 minutes.
+> **Time to deploy:** Approximately 10-15 minutes.
 
-### Public method access version
+### Step 1: Deploy MAP Tagger Infrastructure (Central Account)
 
-
-Follow these step-by-step instructions to configure and deploy the Taggr Solution Frontend into your AWS account using CloudFormation.
-
-1. Download clodformation template ([cloudformation.public.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.public.yaml))
-    
-2. Sign in to the AWS Management Console
-    - Navigate to the AWS Console (https://console.aws.amazon.com )
-    - Sign in with your credentials
-
-3. Navigate to the AWS CloudFormation service
-    - From the AWS Console, search for "CloudFormation" in the search bar
-    - Click on the CloudFormation service
-
-
-4. Start Stack Creation
-    - Click the "Create stack" button
-    - Select "With new resources (standard)"
-
-
-5. Specify Template Source
-    - Choose "Upload a template file"
-    - Click "Choose file" and select your CloudFormation template file
-    - Click "Next"
-
-6. Specify Stack Details
-    - Enter a meaningful name for the stack in the "Stack name" field (e.g., "tagger-solution-frontend")
-
-
-7. Configure General Configuration Parameters
-    - GitHubRepositoryUrl: Enter the HTTPS URL for your GitHub repository where the Taggr Solution code is stored
-    - AppUser: Enter the email address that will be used for the application user (e.g., admin@example.com )
-
-8. Configure Network and Security Parameters
-    - WAFRequired: Select "true" if you want to enable AWS WAF protection, or "false" to disable it
-    - IPv4CIDR: (Optional, required only if WAF is enabled) Enter the IPv4 CIDR range that should be allowed access (e.g., 192.168.1.0/24)
-    - IPv6CIDR: (Optional, required only if WAF is enabled) Enter the IPv6 CIDR range that should be allowed access (e.g., 2605:59c8:731d:4810:415:bd81:f251:f260/128)
-
-
-9. Configure Stack Options (Optional)
-    - Add any tags to help identify and manage your stack resources
-    - Configure advanced options if needed (notifications, stack policy, rollback configuration, etc.)
-    - Click "Next"
-
-10. Review Stack Configuration
-    - Review all the parameters and settings for your stack
-    - Scroll down and check the acknowledgment box that states "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
-    - Click "Create stack"
-
-11. Monitor Stack Creation
-    - The CloudFormation console will display the stack creation status
-    - View the "Events" tab to monitor the progress and troubleshoot any issues
-    - Wait until the stack status changes to "CREATE_COMPLETE"
-
-12. Access Stack Outputs
-    - Once the stack creation is complete, navigate to the "Outputs" tab
-    - Here you'll find important information such as the URL to access the frontend application
-    - Log in using the provided application user email (you may receive temporary credentials via email)
-
-
-
-### Private method access version
-
-
-Follow these step-by-step instructions to configure and deploy the Taggr Solution Frontend into your AWS account using CloudFormation.
-
-
-1. Download clodformation template ([cloudformation.private.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.private.yaml))
+1. Download the CloudFormation template ([cloudformation.map-tagger.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.map-tagger.yaml))
 
 2. Sign in to the AWS Management Console
-    - Navigate to the AWS Console (https://console.aws.amazon.com )
-    - Sign in with your credentials
-
-
+   - Navigate to the AWS Console (https://console.aws.amazon.com)
+   - Sign in with your credentials
 
 3. Navigate to the AWS CloudFormation service
-        - From the AWS Console, search for "CloudFormation" in the search bar
-        - Click on the CloudFormation service
-
+   - From the AWS Console, search for "CloudFormation" in the search bar
+   - Click on the CloudFormation service
 
 4. Start Stack Creation
-    - Click the "Create stack" button
-    - Select "With new resources (standard)"
+   - Click the "Create stack" button
+   - Select "With new resources (standard)"
 
 5. Specify Template Source
-    - Choose "Upload a template file"
-    - Click "Choose file" and select your CloudFormation template file
-    - Click "Next"
+   - Choose "Upload a template file"
+   - Click "Choose file" and select the `cloudformation.map-tagger.yaml` template
+   - Click "Next"
 
 6. Specify Stack Details
-    - Enter a meaningful name for the stack in the "Stack name" field (e.g., "tagger-solution-frontend")
+   - Enter a meaningful name for the stack (e.g., "map-tagger")
 
-7. Configure General Configuration Parameters
-    - GitHubRepositoryUrl: Enter the HTTPS URL for your GitHub repository where the Taggr Solution code is stored
-    - AppUser: Enter the email address that will be used for the application user (e.g., admin@example.com )
-
-
-8. Configure Network and Security Parameters
-    - VPCId: Select the VPC ID where you want to deploy the App Runner service
-    - SubnetId: Select the Subnet ID for the App Runner VPC Connector
-    - IPv4CIDR: Enter the IPv4 CIDR range that should be allowed access through AWS Security Group (e.g., 192.168.1.0/24)
-    - IPv6CIDR: Enter the IPv6 CIDR range that should be allowed access through AWS Security Group (e.g., 2605:59c8:731d:4810:415:bd81:f251:f260/128)
-
-9. Configure Stack Options (Optional)
-    - Add any tags to help identify and manage your stack resources
-    - Configure advanced options if needed (notifications, stack policy, rollback configuration, etc.)
-    - Click "Next"
-
-
-10. Review Stack Configuration
-    - Review all the parameters and settings for your stack
-    - Scroll down and check the acknowledgment box that states "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
-    - Click "Create stack"
-
-
-11. Monitor Stack Creation
-    - The CloudFormation console will display the stack creation status
-    - View the "Events" tab to monitor the progress and troubleshoot any issues
-    - Wait until the stack status changes to "CREATE_COMPLETE"
-
-
-12. Access Stack Outputs
-    - Once the stack creation is complete, navigate to the "Outputs" tab
-    - Here you'll find important information such as the URL to access the frontend application
-    - Save or note down these output values for future reference
-
-13. Verify Deployment
-    - Once the stack creation is complete, navigate to the "Outputs" tab
-    - Here you'll find important information such as the URL to access the frontend application
-    - Log in using the provided application user email (you may receive temporary credentials via email)
-
-
-
-### IAM Role Deployment
-
-If the tagging process needs to be performed across multiple AWS accounts (which is the most common scenario), you will need to deploy a cross-account IAM role to access those accounts. The recommended approach is to deploy this role as an AWS CloudFormation StackSet from your management account. This will allow the role to be accessible across all the accounts that are part of the MAP project.
-
-1. Download clodformation template ([cloudformation.iam.role.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.iam.role.yaml))
-
-2.	Sign in to the AWS Management Console.
-3.	Navigate to the AWS CloudFormation service.
-4.	Click on StackSets on the left-side menu.
-5.	Click on Create StackSet.
-6.	In the "Choose template" screen, select Service-managed permissions.
-7.	Specify Template Source
-    - Choose "Upload a template file" 
-    - Click "Choose file" and select your CloudFormation template (cloudformation.iam.role.yaml)    
-    - Click "Next"
-8.	Enter a name for the StackSet in the "StackSet name" field.
-9.	In the "RoleARN" field enter the role ARN that was created during the the first template deployment (found in the Outputs section).
-10.	Click Next.
-11.	In the “Set deployment options” select Deploy new stacks.
-12.	Under the “Deployment targets” section select the option that fits best for the deployment.
-13.	Under "Specify regions," select only one region (e.g., US East - N. Virginia).
-Note: Since this CloudFormation StackSet only deploys an IAM role, which is a global service, selecting multiple regions will cause deployment errors. The StackSet will attempt to deploy the same IAM role in each region, leading to failures.
-15.	Under "Deployment options," set Failure tolerance to 1. Important: This setting is crucial because the StackSet will attempt to redeploy the existing role in the original account. If the tolerance is not set to 1, the entire deployment will fail.
-16.	In the "Review" screen, verify that all the parameters are correct.
-17.	Select the I acknowledge that AWS CloudFormation might create IAM resources with custom names checkbox.
-18.	Click Submit.
-
-
-
-### Automation
-
-The MAP Tagger automation solution provides a scalable, serverless approach to automatically tag AWS resources across multiple accounts and regions. This solution uses ECS Fargate tasks orchestrated by Lambda functions to process tagging jobs from an SQS queue.
-
-<img width="1089" alt="image" src="automation/map-tagger-architecture-final.png">
-
-#### Deployment Steps
-
-##### 1. Deploy MAP Tagger Infrastructure
-
-1. Download CloudFormation template ([cloudformation.map-tagger.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.map-tagger.yaml))
-
-2. Sign in to the AWS Management Console and navigate to CloudFormation
-
-3. Create a new stack and upload the template
-
-4. Configure the following parameters:
+7. Configure Parameters
 
    **Network Configuration:**
    - **VpcId**: Select the VPC where ECS tasks will run
-   - **SubnetIds**: Select subnets for ECS tasks (recommend private subnets with NAT gateway)
+   - **SubnetIds**: Select private subnets with NAT gateway access for ECS tasks
 
    **Source Code:**
-   - **GitHubRepo**: GitHub repository URL (default: https://github.com/aws-samples/sample-tagger)
+   - **GitHubRepo**: GitHub repository URL (default: https://github.com/aws-samples/sample-tagger.git)
    - **DockerfilePath**: Path to Dockerfile (default: automation/Dockerfile)
 
    **Tagging Configuration:**
-   - **Accounts**: Comma-separated list of AWS account IDs to tag (e.g., 123456789012,987654321098)
-   - **Regions**: Comma-separated list of AWS regions (default: us-east-1)
-   - **StartDate**: Only tag resources created after this date (YYYY-MM-DD format)
+   - **Accounts**: Comma-separated list of target AWS account IDs (e.g., 111111111111,222222222222)
+   - **Regions**: Comma-separated list of AWS regions to process (default: us-east-1)
+   - **StartDate**: Only tag resources created after this date in YYYY-MM-DD format (e.g., 2024-01-01)
    - **MapTagKey**: Tag key to apply (default: map-migrated)
-   - **MapTagValue**: Tag value to apply (e.g., mig12345)
-   - **Services**: Comma-separated list of AWS services to tag. Follow naming convention in modules/* (e.g apigateway,dynamodb,ec2) (leave empty for all supported services)
+   - **MapTagValue**: Tag value to apply (e.g., migXXXXXXXXXX)
+   - **Services**: Comma-separated list of specific AWS services to tag, following naming convention in `modules/` (e.g., apigateway,dynamodb,ec2). Leave empty for all 82 supported services.
 
    **Scheduling (Optional):**
-   - **ScheduleExpression**: EventBridge schedule expression (e.g., rate(1 day) or cron(0 2 * * ? *))
+   - **ScheduleExpression**: EventBridge schedule expression (e.g., `rate(1 day)` or `cron(0 2 * * ? *)`)
    - **EnableSchedule**: Set to "true" to enable automatic scheduled execution (default: false)
 
-5. Review and create the stack
+8. Configure Stack Options (Optional)
+   - Add any tags to help identify and manage your stack resources
+   - Click "Next"
 
-6. Wait for stack creation to complete (approximately 10-15 minutes)
+9. Review Stack Configuration
+   - Review all the parameters and settings
+   - Check the acknowledgment box: "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
+   - Click "Create stack"
 
-7. Navigate to the "Outputs" tab and note the **ECSIAMRoleArn** value - you'll need this for the next step
+10. Monitor Stack Creation
+    - View the "Events" tab to monitor progress
+    - Wait until the stack status changes to "CREATE_COMPLETE"
 
-##### 2. Deploy Cross-Account IAM Roles
+11. Note Stack Outputs
+    - Navigate to the "Outputs" tab
+    - Note the **ECSIAMRoleArn** value — you will need this for the next step
 
-To enable the MAP Tagger to access resources in multiple AWS accounts, deploy the IAM role as a StackSet:
 
-1. Download CloudFormation template ([cloudformation.iam.role.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.iam.role.yaml))
+### Step 2: Deploy Cross-Account IAM Roles (Target Accounts)
 
-2. Navigate to CloudFormation → StackSets
+To enable the MAP Tagger to access resources in target AWS accounts, deploy the IAM role as a CloudFormation StackSet from your management account.
 
-3. Click "Create StackSet" and select "Service-managed permissions"
+1. Download the CloudFormation template ([cloudformation.iam.role.yaml](https://raw.githubusercontent.com/aws-samples/sample-tagger/refs/heads/main/cloudformation.iam.role.yaml))
 
-4. Upload the cloudformation.iam.role.yaml template
+2. Sign in to the AWS Management Console and navigate to CloudFormation
 
-5. In the "RoleARN" parameter, enter the **ECSIAMRoleArn** value from the MAP Tagger stack outputs (from step 1.7)
+3. Click on **StackSets** on the left-side menu
 
-6. Deploy to target accounts:
-   - Select "Deploy new stacks"
-   - Choose deployment targets (organizational units or specific accounts)
-   - Select **only one region** (IAM is global, multiple regions will cause errors)
-   - Set "Failure tolerance" to 1
+4. Click **Create StackSet**
 
-7. Review and submit
+5. In the "Choose template" screen, select **Service-managed permissions**
 
-#### Running the Automation
+6. Specify Template Source
+   - Choose "Upload a template file"
+   - Click "Choose file" and select the `cloudformation.iam.role.yaml` template
+   - Click "Next"
+
+7. Enter a name for the StackSet (e.g., "map-tagger-cross-account-role")
+
+8. In the **RoleARN** parameter, enter the **ECSIAMRoleArn** value from the MAP Tagger stack outputs (from Step 1.11)
+
+9. Click "Next"
+
+10. In "Set deployment options", select **Deploy new stacks**
+
+11. Under "Deployment targets", select the option that fits your deployment (organizational units or specific accounts)
+
+12. Under "Specify regions", select **only one region** (e.g., US East - N. Virginia)
+    > **Important:** Since this StackSet only deploys an IAM role (a global resource), selecting multiple regions will cause deployment errors.
+
+13. Under "Deployment options", set **Failure tolerance** to **1**
+    > **Important:** The StackSet will attempt to redeploy the existing role in the central account. If tolerance is not set to 1, the entire deployment will fail.
+
+14. Review and verify all parameters
+
+15. Check the acknowledgment box: "I acknowledge that AWS CloudFormation might create IAM resources with custom names"
+
+16. Click **Submit**
+
+
+### Step 3: Run the Tagger
 
 **Manual Execution:**
 - Navigate to Lambda in the AWS Console
-- Find the "map-tagger-orchestrator" function
-- Click "Test" to trigger a tagging job
+- Find the `map-tagger-orchestrator` function
+- Click "Test" to trigger a tagging run
 
 **Scheduled Execution:**
-- If you enabled the schedule during deployment, the orchestrator will run automatically
-- To enable/disable: Update the stack and change the "EnableSchedule" parameter
-- To modify schedule: Update the "ScheduleExpression" parameter
+- If you enabled the schedule during deployment, the orchestrator runs automatically
+- To enable/disable: Update the stack and change the `EnableSchedule` parameter
+- To modify the schedule: Update the `ScheduleExpression` parameter
 
-#### How It Works
+### How It Works
 
-1. Lambda orchestrator creates tagging jobs for each account/region/service combination
-2. Jobs are queued in SQS
+1. The Lambda orchestrator creates one tagging job per account/region/service combination
+2. Jobs are queued in SQS (with a dead-letter queue for failed messages)
 3. ECS Fargate tasks are launched to process the queue
-4. Each task assumes a cross-account role and tags resources
-5. Tasks automatically scale based on queue depth
+4. Each task assumes a cross-account IAM role and discovers + tags resources
+5. Tasks automatically scale based on queue depth (configurable via `MAX_TASKS` and `MESSAGES_PER_TASK`)
 6. Results are logged to CloudWatch Logs
 
 
+## Supported Services (82 modules)
+
+<details>
+<summary>Click to expand full list</summary>
+
+| Category | Services |
+|----------|----------|
+| Compute | ec2, ecs, eks, lambda, apprunner, elasticbeanstalk, emr |
+| Database | rds, dynamodb, docdb, neptune, neptune-graph, elasticache, memorydb, redshift, redshift-serverless, timestream-write |
+| Storage | s3, s3control, efs, fsx, glacier, ecr, backup |
+| Networking | elb, elbv2, directconnect, route53, route53resolver, route53domains, route53profiles, route53-recovery-control-config, route53-recovery-readiness, network-firewall |
+| AI/ML | bedrock, bedrock-agent, bedrock-data-automation, sagemaker, sagemaker-geospatial, comprehend, rekognition, textract, kendra, kendraranking, wisdom |
+| Analytics | glue, databrew, athena, kafka, kafkaconnect, emr |
+| Security | kms, secretsmanager, waf, waf-regional, wafv2, cloudhsm, cloudhsmv2, securityhub |
+| Integration | sns, sqs, stepfunctions, apigateway, apigatewayv2 |
+| Management | ssm, ssm-contacts, ssm-incidents, cloudfront, storagegateway, transfer, workspaces, ds, medical-imaging |
+| Migration | mgn, drs, datasync |
+| Other | connect, connectcampaigns, connectcampaignsv2, connectcases, datazone, cognito-idp, cognito-identity |
+
+</details>
+
+
+## Adding New Service Modules
+
+Each module in `modules/` follows a standard interface. To add support for a new AWS service:
+
+### Module Structure
+
+Create `modules/<service-name>.py` with two required functions:
+
+```python
+def get_service_types(account_id, region, service, service_type):
+    """Return a dict of resource type configs."""
+    resource_configs = {
+        'ResourceTypeName': {
+            'method': 'list_things',        # boto3 method to enumerate resources
+            'key': 'Things',                # response key containing the list
+            'id_field': 'ThingId',          # field containing the resource identifier
+            'date_field': 'CreatedAt',      # field with creation timestamp (or None)
+            'nested': False,                # True if items are nested in sub-lists
+            'arn_format': 'arn:aws:myservice:{region}:{account_id}:thing/{resource_id}'
+        }
+    }
+    return resource_configs
+
+
+def discovery(self, session, account_id, region, service, service_type, logger):
+    """Enumerate resources and return them with tags."""
+    status = "success"
+    error_message = ""
+    resources = []
+
+    try:
+        config = get_service_types(account_id, region, service, service_type)[service_type]
+        client = session.client(service, region_name=region)
+
+        paginator = client.get_paginator(config['method'])
+        for page in paginator.paginate():
+            for item in page[config['key']]:
+                resource_id = item[config['id_field']]
+                arn = config['arn_format'].format(
+                    region=region, account_id=account_id, resource_id=resource_id
+                )
+
+                try:
+                    tags_resp = client.list_tags_for_resource(ResourceArn=arn)
+                    tags = {t['Key']: t['Value'] for t in tags_resp.get('Tags', [])}
+                except Exception:
+                    tags = {}
+
+                resources.append({
+                    "account_id": account_id,
+                    "region": region,
+                    "service": service,
+                    "resource_type": service_type,
+                    "resource_id": resource_id,
+                    "name": tags.get('Name', resource_id),
+                    "creation_date": str(item.get(config['date_field'], '')),
+                    "tags": tags,
+                    "tags_number": len(tags),
+                    "arn": arn
+                })
+    except Exception as e:
+        status = "error"
+        error_message = str(e)
+        logger.error(f"Discovery error: {error_message}")
+
+    return f'{service}:{service_type}', status, error_message, resources
+```
+
+### Key Points
+
+- The file name must match the boto3 service name (e.g., `opensearch.py` for `boto3.client('opensearch')`)
+- `get_service_types()` can define multiple resource types per service (e.g., ec2.py defines Instance, Volume, Snapshot, VPC, etc.)
+- The `discovery()` function must return a tuple: `(service_key, status, error_message, resources_list)`
+- Each resource dict must include `arn` and `tags` — the ECS worker uses these to determine what needs tagging
+- Handle pagination — most AWS list APIs are paginated
+- Handle missing tags gracefully — not all resources have tags
+
+### Testing a New Module
+
+```python
+import boto3
+from modules import myservice
+
+session = boto3.Session(region_name='us-east-1')
+account_id = boto3.client('sts').get_caller_identity()['Account']
+
+types = myservice.get_service_types(account_id, 'us-east-1', 'myservice', None)
+for stype in types:
+    key, status, err, resources = myservice.discovery(
+        None, session, account_id, 'us-east-1', 'myservice', stype, logging.getLogger()
+    )
+    print(f"{key}: {len(resources)} resources found, status={status}")
+```
 
 
 ## Security
@@ -402,8 +305,6 @@ To enable the MAP Tagger to access resources in multiple AWS accounts, deploy th
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
 
-
 ## License
 
-This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE.txt) file.
-
+This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.

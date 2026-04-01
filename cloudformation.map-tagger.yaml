@@ -71,6 +71,8 @@ Resources:
       RepositoryName: map-tagger
       ImageScanningConfiguration:
         ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: KMS
 
   # CodeBuild Service Role
   CodeBuildServiceRole:
@@ -93,10 +95,13 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: "*"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}-map-tagger-build:*"
               - Effect: Allow
                 Action:
                   - ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetDownloadUrlForLayer
                   - ecr:BatchGetImage
@@ -105,7 +110,7 @@ Resources:
                   - ecr:InitiateLayerUpload
                   - ecr:PutImage
                   - ecr:UploadLayerPart
-                Resource: "*"
+                Resource: !GetAtt ECRRepository.Arn
 
   # CodeBuild Project
   CodeBuildProject:
@@ -182,7 +187,7 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: 900
       Code:
         ZipFile: |
@@ -249,6 +254,7 @@ Resources:
       VisibilityTimeout: 900  # 15 minutes
       MessageRetentionPeriod: 1209600  # 14 days
       ReceiveMessageWaitTimeSeconds: 20
+      SqsManagedSseEnabled: true
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt TaggingDLQ.Arn
         maxReceiveCount: 3
@@ -259,6 +265,7 @@ Resources:
     Properties:
       QueueName: map-tagger-dlq
       MessageRetentionPeriod: 1209600  # 14 days
+      SqsManagedSseEnabled: true
 
   # ECS Cluster
   ECSCluster:
@@ -316,7 +323,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: map-tagger-orchestrator
-      Runtime: python3.9
+      ReservedConcurrentExecutions: 1
+      Runtime: python3.12
       Handler: index.lambda_handler
       Code:
         ZipFile: |
@@ -517,8 +525,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - ecs:RunTask
+                Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/map-tagger-task:*"
+              - Effect: Allow
+                Action:
                   - ecs:DescribeTasks
-                Resource: "*"
+                Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/map-tagger-cluster/*"
               - Effect: Allow
                 Action:
                   - iam:PassRole
