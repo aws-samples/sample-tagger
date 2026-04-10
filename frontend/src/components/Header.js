@@ -68,7 +68,14 @@ export default function App() {
         i18nStrings={i18nStrings}
         identity={{
           href: '/',
-          title:  (<Header variant="h1">{configuration['apps-settings']['application-title'] }</Header>)
+          title:  (
+            <Header variant="h1">
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/tag-icon.svg" alt="" style={{ width: '24px', height: '24px' }} />
+                {configuration['apps-settings']['application-title']}
+              </span>
+            </Header>
+          )
         }}
         utilities={[          
           { type: 'button', iconName: 'settings', title: 'Settings', ariaLabel: 'Settings', href : "/profiles/" },
