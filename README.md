@@ -47,6 +47,214 @@ This separation provides least-privilege access: the root role can only assume o
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured with valid credentials
 - Python 3.11+ ([Windows installer](https://www.python.org/ftp/python/3.11.0/python-3.11.0b2-amd64.exe))
 
+<details>
+<summary><strong>AWS CLI Configuration Guide (Assume existing IAM roles)</strong></summary>
+
+#### 1. Create an IAM User
+
+Create an IAM user in your AWS account with permissions to assume the IAM roles created by CloudFormation:
+
+1. Go to IAM → Users → Create user
+2. Enter username (e.g., `taggr-user`)
+3. Select "Attach policies directly"
+4. Create and attach a custom policy with assume role permissions:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "sts:AssumeRole",
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+5. Complete user creation
+
+#### 2. Create Access Keys
+
+1. Go to IAM → Users → Select your user
+2. Navigate to "Security credentials" tab
+3. Click "Create access key"
+4. Select "Command Line Interface (CLI)"
+5. Check the confirmation box and click "Next"
+6. Click "Create access key"
+7. **Important:** Copy the Access Key ID and Secret Access Key
+
+#### 3. Configure AWS CLI
+
+**Using `aws configure`:**
+```bash
+aws configure
+```
+
+Enter your credentials:
+```
+AWS Access Key ID [None]: 
+AWS Secret Access Key [None]: 
+Default region name [None]: us-east-1
+Default output format [None]: json
+```
+
+**Or using environment variables:**
+```bash
+# macOS / Linux
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+export AWS_DEFAULT_REGION="us-east-1"
+
+# Windows (PowerShell)
+$env:AWS_ACCESS_KEY_ID=""
+$env:AWS_SECRET_ACCESS_KEY=""
+$env:AWS_DEFAULT_REGION="us-east-1"
+```
+
+#### 4. Verify Configuration
+
+```bash
+aws sts get-caller-identity
+```
+
+Expected output:
+```json
+{
+  "UserId": "",
+  "Account": "123456789012",
+  "Arn": "arn:aws:iam::123456789012:user/taggr-user"
+}
+```
+
+</details>
+
+<details>
+<summary><strong>AWS CLI Configuration Guide (Create IAM roles from AWS CLI)</strong></summary>
+
+#### 1. Create an IAM User
+
+Create an IAM user in your AWS account with permissions to create IAM roles via CloudFormation:
+
+1. Go to IAM → Users → Create user
+2. Enter username (e.g., `taggr-admin`)
+3. Select "Attach policies directly"
+4. Attach the following AWS managed policy:
+   - `IAMFullAccess` (for creating IAM roles)
+   
+   Or create a custom policy with minimum permissions:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "iam:CreateRole",
+           "iam:PutRolePolicy",
+           "iam:AttachRolePolicy",
+           "iam:GetRole",
+           "iam:PassRole",
+           "iam:DeleteRole",
+           "iam:DetachRolePolicy",
+           "iam:DeleteRolePolicy",
+           "iam:ListAttachedRolePolicies",
+           "iam:ListRolePolicies",
+           "iam:CreatePolicy",
+           "iam:GetPolicy",
+           "iam:DeletePolicy",
+           "iam:ListPolicyVersions",
+           "cloudformation:CreateStack",
+           "cloudformation:UpdateStack",
+           "cloudformation:DeleteStack",
+           "cloudformation:DescribeStacks",
+           "cloudformation:DescribeStackEvents",
+           "cloudformation:GetTemplate"
+         ],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+5. **Optional:** If you want to use the same user to assume the roles after creation, also attach this policy:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "sts:AssumeRole",
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+6. Complete user creation
+
+#### 2. Create Access Keys
+
+1. Go to IAM → Users → Select your user
+2. Navigate to "Security credentials" tab
+3. Click "Create access key"
+4. Select "Command Line Interface (CLI)"
+5. Check the confirmation box and click "Next"
+6. Optionally add a description tag
+7. Click "Create access key"
+8. **Important:** Download the CSV or copy the Access Key ID and Secret Access Key (you won't be able to see the secret again)
+
+#### 3. Configure AWS CLI
+
+Set up your AWS CLI with the access keys:
+
+**Using `aws configure` (Interactive):**
+```bash
+aws configure
+```
+
+You'll be prompted to enter:
+```
+AWS Access Key ID [None]: 
+AWS Secret Access Key [None]: 
+Default region name [None]: us-east-1
+Default output format [None]: json
+```
+
+**Or using environment variables:**
+```bash
+# macOS / Linux
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+export AWS_DEFAULT_REGION="us-east-1"
+
+# Windows (PowerShell)
+$env:AWS_ACCESS_KEY_ID=""
+$env:AWS_SECRET_ACCESS_KEY=""
+$env:AWS_DEFAULT_REGION="us-east-1"
+
+# Windows (Command Prompt)
+set AWS_ACCESS_KEY_ID=""
+set AWS_SECRET_ACCESS_KEY=""
+set AWS_DEFAULT_REGION="us-east-1"
+```
+
+#### 4. Verify Configuration
+
+Test your AWS CLI configuration:
+
+```bash
+# Verify credentials are working
+aws sts get-caller-identity
+```
+
+Expected output:
+```json
+{
+  "UserId": "",
+  "Account": "123456789012",
+  "Arn": "arn:aws:iam::123456789012:user/taggr-admin"
+}
+```
+
+</details>
+
 
 ### Step 1: Clone the Repository
 
