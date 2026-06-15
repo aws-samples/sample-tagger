@@ -504,7 +504,8 @@ def fn_05_create_tagging_process(event: dict, db_config: dict, region: str, conf
                     region,
                     service,
                     resource_id,
-                    arn
+                    arn,
+                    resource_type
                 FROM
                     tbresources
                 WHERE 
