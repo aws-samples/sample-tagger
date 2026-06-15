@@ -229,12 +229,20 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
             if not resource_type_for_tagging:
                 raise ValueError(f"Unsupported resource type for tagging: {resource.resource_type}")
 
+            # SSM AddTagsToResource expects the bare resource ID for these types
+            # (e.g. pb-xxxx, mw-xxxx), but discovery may store the full ARN.
+            # Parameter and Document use names (which may contain '/'), so they
+            # must be passed through unchanged.
+            resource_id_for_tagging = resource.identifier
+            if resource_type_for_tagging in ('PatchBaseline', 'MaintenanceWindow'):
+                resource_id_for_tagging = resource_id_for_tagging.rsplit('/', 1)[-1]
+
             if tags_action == 1:
                 # Add tags - Convert to SSM format (list of objects)
                 ssm_tags = [{'Key': tag['Key'], 'Value': tag['Value']} for tag in tags]
                 ssm_client.add_tags_to_resource(
                     ResourceType=resource_type_for_tagging,
-                    ResourceId=resource.identifier,
+                    ResourceId=resource_id_for_tagging,
                     Tags=ssm_tags
                 )
                         
@@ -242,7 +250,7 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
                 # Remove tags
                 ssm_client.remove_tags_from_resource(
                     ResourceType=resource_type_for_tagging,
-                    ResourceId=resource.identifier,
+                    ResourceId=resource_id_for_tagging,
                     TagKeys=tag_keys
                 )
                     

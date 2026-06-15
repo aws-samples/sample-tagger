@@ -42,6 +42,7 @@ class ResourceInfo:
     service: str
     identifier: str
     arn: str
+    resource_type: str = ""
 
 
 ######################################################

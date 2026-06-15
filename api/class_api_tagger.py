@@ -187,7 +187,8 @@ class classTagger:
                         region,
                         service,
                         resource_id,
-                        arn
+                        arn,
+                        resource_type
                     FROM
                         tbresources
                     WHERE 

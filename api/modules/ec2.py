@@ -345,7 +345,13 @@ def discovery(self,session, account_id, region, service, service_type, logger):
                     resource_tags = {tag['Key']: tag['Value'] for tag in item.get('Tags', [])}
                     name_tag = resource_tags.get('Name', '')
 
-                    creation_date = item.get(config['date_field']) if config['date_field'] else ''
+                    # For EC2 instances, LaunchTime reflects the last start time
+                    # (it changes on every stop/start), so derive a more accurate
+                    # creation date from the root EBS volume's attach time instead.
+                    if service_type == 'Instance':
+                        creation_date = get_instance_creation_date(item)
+                    else:
+                        creation_date = item.get(config['date_field']) if config['date_field'] else ''
 
                     arn = config['arn_format'].format(
                         region=region,
@@ -427,6 +433,50 @@ def tagging(account_id, region, service, client, resources, tags_string, tags_ac
             })    
     
     return results
+
+
+####----| Instance creation date helper
+def get_instance_creation_date(item: Dict) -> str:
+    """
+    Determine the most meaningful "creation" date for an EC2 instance.
+
+    LaunchTime reflects the last start time (it changes on every stop/start),
+    so it is a poor proxy for when an instance was created. The root EBS volume
+    is created when the instance is first launched and persists across
+    stop/start, so its attach time is a much better approximation.
+
+    Strategy (Option B - no extra API calls):
+      1. Use the AttachTime of the root EBS volume, located by matching
+         RootDeviceName against BlockDeviceMappings. This works for both Linux
+         and Windows instances, since both are EBS-backed by default and the
+         root device name is read from the instance rather than assumed.
+      2. Fall back to LaunchTime when the root volume cannot be resolved
+         (e.g. instance-store-backed instances, or missing block device data).
+
+    Args:
+        item: A single instance dict from describe_instances
+
+    Returns:
+        ISO 8601 creation date string, or '' if no date is available
+    """
+    creation = None
+
+    # Only EBS-backed instances expose a root-volume attach time
+    if item.get('RootDeviceType') == 'ebs':
+        root_device_name = item.get('RootDeviceName')
+        for mapping in item.get('BlockDeviceMappings', []):
+            if mapping.get('DeviceName') == root_device_name:
+                creation = mapping.get('Ebs', {}).get('AttachTime')
+                break
+
+    # Fallback to LaunchTime (current/last boot time)
+    if not creation:
+        creation = item.get('LaunchTime')
+
+    # Normalize datetime objects to an ISO 8601 string
+    if hasattr(creation, 'isoformat'):
+        return creation.isoformat()
+    return creation if creation else ''
 
 
 ####----| Parse method

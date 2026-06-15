@@ -186,13 +186,13 @@ class AWSResourceTagger:
     
     def group_resources(
         self,
-        resources: List[Tuple[str, str, str, str, str]]
+        resources: List[Tuple[str, str, str, str, str, str]]
     ) -> Dict[str, Dict[str, Dict[str, List[ResourceInfo]]]]:
         """
         Group resources by account, region, and service.
         
         Args:
-            resources: List of tuples (account_id, region, service, identifier, arn)
+            resources: List of tuples (account_id, region, service, identifier, arn, resource_type)
             
         Returns:
             Nested dictionary: {account_id: {region: {service: [ResourceInfo]}}}
@@ -234,6 +234,31 @@ class AWSResourceTagger:
         if hasattr(self, 'scan_logger'):
             self.scan_logger.info(f"Tagging # Account : {account_id}, Region : {region}, Service : {service}")
         
+        # Skip resources whose ARN belongs to a different account (e.g. AWS-managed
+        # or cross-account resources surfaced during discovery, like AWS-predefined
+        # SSM patch baselines). These cannot be tagged from the target account, so
+        # report them as 'skipped' instead of letting the AWS API fail them as errors.
+        taggable_resources = []
+        for resource in resources:
+            arn_account = self._extract_arn_account(getattr(resource, 'arn', ''))
+            if arn_account and arn_account != account_id:
+                results.append({
+                    'account_id': account_id,
+                    'region': region,
+                    'service': service,
+                    'identifier': resource.identifier,
+                    'arn': resource.arn,
+                    'status': 'skipped',
+                    'error': f"Resource ARN belongs to a different account ({arn_account}); not taggable from {account_id}"
+                })
+                if hasattr(self, 'scan_logger'):
+                    self.scan_logger.info(
+                        f"Skipping {service} resource {resource.identifier}: "
+                        f"ARN account {arn_account} != target account {account_id}"
+                    )
+            else:
+                taggable_resources.append(resource)
+        
         try:
             # Import module
             spec = importlib.util.spec_from_file_location(
@@ -243,16 +268,16 @@ class AWSResourceTagger:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             
-            results = module.tagging(
+            results.extend(module.tagging(
                 account_id,
                 region,
                 service,
                 client,
-                resources,
+                taggable_resources,
                 tags,
                 action,
                 self.logger
-            )
+            ))
             
             # Write per-resource errors to scan log
             if hasattr(self, 'scan_logger'):
@@ -267,7 +292,7 @@ class AWSResourceTagger:
             self.logger.error(error_msg)
             if hasattr(self, 'scan_logger'):
                 self.scan_logger.error(error_msg)
-            for resource in resources:
+            for resource in taggable_resources:
                 results.append({
                     'account_id': account_id,
                     'region': region,
@@ -279,9 +304,30 @@ class AWSResourceTagger:
         
         return results
     
+    @staticmethod
+    def _extract_arn_account(arn: str) -> str:
+        """
+        Extract the AWS account ID from an ARN.
+        
+        ARN format: arn:partition:service:region:account-id:resource
+        
+        Args:
+            arn: The resource ARN
+            
+        Returns:
+            The account ID segment, or an empty string if not present
+            (e.g. S3 bucket ARNs have no account segment)
+        """
+        if not arn:
+            return ""
+        parts = arn.split(':')
+        if len(parts) > 4:
+            return parts[4].strip()
+        return ""
+    
     def tag_resources(
         self,
-        resources: List[Tuple[str, str, str, str, str]],
+        resources: List[Tuple[str, str, str, str, str, str]],
         tags: str,
         action: int
     ) -> Tuple[List[Dict], Dict]:
@@ -289,7 +335,7 @@ class AWSResourceTagger:
         Tag resources in parallel across accounts, regions, and services.
         
         Args:
-            resources: List of tuples (account_id, region, service, identifier, arn)
+            resources: List of tuples (account_id, region, service, identifier, arn, resource_type)
             tags: Tag string in format "key1:value1,key2:value2"
             action: 1 for add tags, 2 for remove tags
             
@@ -303,7 +349,8 @@ class AWSResourceTagger:
         metrics = {
             'total': 0,
             'success': 0,
-            'failed': 0
+            'failed': 0,
+            'skipped': 0
         }
         
         total_resources = len(resources)
@@ -344,18 +391,22 @@ class AWSResourceTagger:
                     # Update metrics
                     for result in results:
                         metrics['total'] += 1
-                        if result.get('status') == 'success':
+                        status = result.get('status')
+                        if status == 'success':
                             metrics['success'] += 1
+                        elif status == 'skipped':
+                            metrics['skipped'] += 1
                         else:
                             metrics['failed'] += 1
                     
                     success_count = sum(1 for r in results if r.get('status') == 'success')
                     error_count = sum(1 for r in results if r.get('status') == 'error')
+                    skipped_count = sum(1 for r in results if r.get('status') == 'skipped')
                     
                     if hasattr(self, 'scan_logger'):
                         self.scan_logger.info(
                             f"[{completed}/{total_batches}] {service} in {account_id}/{region}: "
-                            f"{success_count} success, {error_count} errors"
+                            f"{success_count} success, {error_count} errors, {skipped_count} skipped"
                         )
                         
                 except Exception as e:
@@ -371,9 +422,13 @@ class AWSResourceTagger:
         # Log summary with metrics
         if hasattr(self, 'scan_logger'):
             self.scan_logger.success(
-                f"Tagging completed: {metrics['success']} successful, {metrics['failed']} errors"
+                f"Tagging completed: {metrics['success']} successful, "
+                f"{metrics['failed']} errors, {metrics['skipped']} skipped"
             )
-            self.scan_logger.info(f"Metrics - Total: {metrics['total']}, Success: {metrics['success']}, Failed: {metrics['failed']}")
+            self.scan_logger.info(
+                f"Metrics - Total: {metrics['total']}, Success: {metrics['success']}, "
+                f"Failed: {metrics['failed']}, Skipped: {metrics['skipped']}"
+            )
         
         return all_results, metrics
     
