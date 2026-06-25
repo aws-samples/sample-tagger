@@ -342,7 +342,13 @@ def discovery(self,session, account_id, region, service, service_type, logger):
             for item in items:
                 try:
                     resource_id = item[config['id_field']]
-                    resource_tags = {tag['Key']: tag['Value'] for tag in item.get('Tags', [])}
+                    # Most EC2 resources expose tags under 'Tags', but some
+                    # (e.g. NetworkInterface via describe_network_interfaces)
+                    # return them under 'TagSet'. Support both.
+                    resource_tags = {
+                        tag['Key']: tag['Value']
+                        for tag in (item.get('Tags') or item.get('TagSet') or [])
+                    }
                     name_tag = resource_tags.get('Name', '')
 
                     # For EC2 instances, LaunchTime reflects the last start time

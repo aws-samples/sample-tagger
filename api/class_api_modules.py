@@ -353,7 +353,7 @@ class classModules:
             # GitHub configuration
             github_repo = "aws-samples/sample-tagger"
             github_branch = "main"
-            github_dir = "modules"
+            github_dir = "api/modules"
             
             # Create temporary directory
             temp_dir = "/tmp/repo_download"
@@ -375,6 +375,14 @@ class classModules:
             # Path to the extracted directory containing the target folder
             extracted_dir = f"/tmp/sample-tagger-{github_branch}"
             source_dir = os.path.join(extracted_dir, github_dir)
+            
+            # Fail loudly if the expected source folder is missing, instead of
+            # silently reporting 0 files (which previously masked a wrong path).
+            if not os.path.isdir(source_dir):
+                raise FileNotFoundError(
+                    f"Modules folder '{github_dir}' not found in repository "
+                    f"{github_repo}@{github_branch}"
+                )
             
             # Ensure local modules directory exists
             os.makedirs(self.modules_path, exist_ok=True)

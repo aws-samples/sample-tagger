@@ -1190,7 +1190,7 @@ function Application() {
                                   value={metadataBaseName}
                                   onChange={({ detail }) => {
                                       setMetadataBaseName(detail.value);
-                                      metadataBaseName.current = detail.value;
+                                      currentMetadataBaseName.current = detail.value;
                                   }}
                               />
                           </FormField> 
